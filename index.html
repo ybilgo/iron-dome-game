@@ -411,7 +411,7 @@
 
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
-  var PW = 56, PH = 42, PSPEED = 4.5;
+  var PW = 60, PH = 52, PSPEED = 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
   var FONT_HEB = "Arial, sans-serif";
@@ -777,38 +777,140 @@
       ctx.globalAlpha = 0.3;
     }
 
-    var x = px - PW / 2, y = py - PH / 2;
+    // Shield glow when invincible
+    if (shieldTimer > 0) {
+      var sg = ctx.createRadialGradient(px, py, 10, px, py, 38);
+      sg.addColorStop(0, 'rgba(68,221,255,0.0)');
+      sg.addColorStop(0.7, 'rgba(68,221,255,0.15)');
+      sg.addColorStop(1, 'rgba(68,221,255,0.0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(px, py, 38, 0, 6.28); ctx.fill();
+    }
 
-    ctx.shadowColor = '#60a5fa';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x, y, PW, PH);
-    ctx.shadowBlur = 0;
+    // === LION BODY (facing up - shooting upward) ===
+    var s = 1.0; // scale
 
+    // Body - golden oval
+    ctx.fillStyle = '#d4a030';
+    ctx.beginPath();
+    ctx.ellipse(px, py + 4*s, 18*s, 22*s, 0, 0, 6.28);
+    ctx.fill();
+    // Darker belly
+    ctx.fillStyle = '#c49028';
+    ctx.beginPath();
+    ctx.ellipse(px, py + 8*s, 12*s, 14*s, 0, 0, 6.28);
+    ctx.fill();
+
+    // === נילי on the back ===
     ctx.fillStyle = '#0038b8';
-    ctx.fillRect(x, y + 4, PW, 7);
-    ctx.fillRect(x, y + PH - 11, PW, 7);
-
-    drawStar6(px, py + 1, 7);
-
-    ctx.fillStyle = '#0038b8';
-    ctx.font = 'bold 7px ' + FONT_TITLE;
+    ctx.font = 'bold ' + Math.round(10*s) + 'px ' + FONT_HEB;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('IDF', px, py - 11);
+    ctx.fillText('נילי', px, py + 6*s);
 
-    ctx.fillStyle = '#3b82f6';
-    ctx.fillRect(px - 2, y - 9, 4, 11);
-    ctx.fillStyle = '#93c5fd';
-    ctx.fillRect(px - 4, y - 11, 8, 3);
+    // Mane - golden/amber fluffy circle around head
+    var maneY = py - 16*s;
+    var maneColors = ['#b8860b', '#d4a030', '#e8b830', '#d4a030'];
+    for (var mi = 0; mi < 12; mi++) {
+      var ma = (mi / 12) * 6.28 + Math.sin(performance.now()/300 + mi) * 0.1;
+      var mr = 16*s + Math.sin(performance.now()/200 + mi*1.3) * 2;
+      ctx.fillStyle = maneColors[mi % 4];
+      ctx.beginPath();
+      ctx.arc(px + Math.cos(ma)*mr, maneY + Math.sin(ma)*mr*0.85, 7*s, 0, 6.28);
+      ctx.fill();
+    }
 
-    var gs = 3 + Math.sin(performance.now() / 80) * 1.5;
-    var eg = ctx.createRadialGradient(px, y + PH, 0, px, y + PH, gs * 3);
-    eg.addColorStop(0, 'rgba(96,165,250,0.6)');
-    eg.addColorStop(1, 'rgba(96,165,250,0)');
+    // Head
+    ctx.fillStyle = '#d4a030';
+    ctx.beginPath();
+    ctx.arc(px, maneY, 13*s, 0, 6.28);
+    ctx.fill();
+
+    // Ears
+    ctx.fillStyle = '#c49028';
+    ctx.beginPath(); ctx.arc(px - 10*s, maneY - 10*s, 5*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 10*s, maneY - 10*s, 5*s, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#e8b090';
+    ctx.beginPath(); ctx.arc(px - 10*s, maneY - 10*s, 3*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 10*s, maneY - 10*s, 3*s, 0, 6.28); ctx.fill();
+
+    // Eyes - fierce
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(px - 5*s, maneY - 2*s, 4*s, 3*s, 0, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px + 5*s, maneY - 2*s, 4*s, 3*s, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(px - 5*s, maneY - 2*s, 2*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 5*s, maneY - 2*s, 2*s, 0, 6.28); ctx.fill();
+    // Eye glint
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(px - 4*s, maneY - 3*s, 0.8*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 6*s, maneY - 3*s, 0.8*s, 0, 6.28); ctx.fill();
+
+    // Nose
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath();
+    ctx.moveTo(px, maneY + 3*s);
+    ctx.lineTo(px - 3*s, maneY + 6*s);
+    ctx.lineTo(px + 3*s, maneY + 6*s);
+    ctx.closePath();
+    ctx.fill();
+
+    // === OPEN JAW (roaring upward!) ===
+    // Upper jaw/snout pointing UP
+    ctx.fillStyle = '#c49028';
+    ctx.beginPath();
+    ctx.moveTo(px - 8*s, maneY - 10*s);
+    ctx.quadraticCurveTo(px, maneY - 22*s, px + 8*s, maneY - 10*s);
+    ctx.closePath();
+    ctx.fill();
+    // Inside mouth (dark)
+    ctx.fillStyle = '#8B0000';
+    ctx.beginPath();
+    ctx.moveTo(px - 6*s, maneY - 10*s);
+    ctx.quadraticCurveTo(px, maneY - 19*s, px + 6*s, maneY - 10*s);
+    ctx.closePath();
+    ctx.fill();
+    // Teeth on upper jaw
+    ctx.fillStyle = '#fff';
+    for (var ti = -2; ti <= 2; ti++) {
+      ctx.beginPath();
+      var tx = px + ti * 3*s;
+      ctx.moveTo(tx - 1.5*s, maneY - 11*s);
+      ctx.lineTo(tx, maneY - 14*s);
+      ctx.lineTo(tx + 1.5*s, maneY - 11*s);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Tail (curling from body)
+    ctx.strokeStyle = '#d4a030';
+    ctx.lineWidth = 3*s;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    var tailWag = Math.sin(performance.now()/150) * 8;
+    ctx.moveTo(px, py + 24*s);
+    ctx.quadraticCurveTo(px + 20*s + tailWag, py + 20*s, px + 15*s + tailWag, py + 10*s);
+    ctx.stroke();
+    // Tail tuft
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath();
+    ctx.arc(px + 15*s + tailWag, py + 10*s, 4*s, 0, 6.28);
+    ctx.fill();
+
+    // Front paws
+    ctx.fillStyle = '#d4a030';
+    ctx.beginPath(); ctx.ellipse(px - 12*s, py + 22*s, 5*s, 4*s, -0.2, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px + 12*s, py + 22*s, 5*s, 4*s, 0.2, 0, 6.28); ctx.fill();
+
+    // === Golden glow from mouth (like fire breath direction) ===
+    var gs = 4 + Math.sin(performance.now() / 80) * 2;
+    var eg = ctx.createRadialGradient(px, maneY - 22*s, 0, px, maneY - 22*s, gs * 3);
+    eg.addColorStop(0, 'rgba(255,200,50,0.5)');
+    eg.addColorStop(0.5, 'rgba(255,150,0,0.2)');
+    eg.addColorStop(1, 'rgba(255,100,0,0)');
     ctx.fillStyle = eg;
     ctx.beginPath();
-    ctx.arc(px, y + PH, gs * 3, 0, 6.28);
+    ctx.arc(px, maneY - 22*s, gs * 3, 0, 6.28);
     ctx.fill();
 
     // HP bar below player
@@ -824,40 +926,54 @@
     ctx.restore();
   }
 
+  function drawStarOfDavid(cx, cy, sz, color) {
+    ctx.fillStyle = color;
+    // Triangle pointing up
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - sz);
+    ctx.lineTo(cx + sz * 0.866, cy + sz * 0.5);
+    ctx.lineTo(cx - sz * 0.866, cy + sz * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    // Triangle pointing down
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + sz);
+    ctx.lineTo(cx + sz * 0.866, cy - sz * 0.5);
+    ctx.lineTo(cx - sz * 0.866, cy - sz * 0.5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
   function drawPBullet(b) {
     ctx.save();
     var col = ammoColors[b.ammoType || 0];
-    var tg = ctx.createLinearGradient(b.x, b.y, b.x, b.y + 22);
-    tg.addColorStop(0, col + 'cc');
+
+    // Trail glow
+    var tg = ctx.createRadialGradient(b.x, b.y + 6, 0, b.x, b.y + 6, 12);
+    tg.addColorStop(0, col + '66');
     tg.addColorStop(1, col + '00');
     ctx.fillStyle = tg;
-    ctx.fillRect(b.x - 2, b.y, 4, 22);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(b.x - 2, b.y - 4, 4, 8);
+    ctx.beginPath(); ctx.arc(b.x, b.y + 6, 12, 0, 6.28); ctx.fill();
 
-    if (b.ammoType === 1) {
-      ctx.fillStyle = '#ff8844';
-      ctx.beginPath();
-      ctx.arc(b.x, b.y - 4, 4, 0, 6.28);
-      ctx.fill();
-    } else if (b.ammoType === 3) {
-      ctx.strokeStyle = '#aa66ff';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(b.x, b.y);
-      for (var zi = 0; zi < 4; zi++) {
-        ctx.lineTo(b.x + (zi%2===0?4:-4), b.y - zi*5);
-      }
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.moveTo(b.x, b.y - 8);
-      ctx.lineTo(b.x + 3, b.y - 2);
-      ctx.lineTo(b.x - 3, b.y - 2);
-      ctx.closePath();
-      ctx.fill();
-    }
+    // Spin the star
+    ctx.translate(b.x, b.y);
+    ctx.rotate(performance.now() / 200 + (b.x * 0.1));
+    ctx.translate(-b.x, -b.y);
+
+    var starSize = 5;
+    if (b.ammoType === 1) starSize = 7;       // Explosive - bigger star
+    else if (b.ammoType === 2) starSize = 5;   // Piercing
+    else if (b.ammoType === 3) starSize = 6;   // Lightning
+
+    // Outer glow
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 8;
+    drawStarOfDavid(b.x, b.y, starSize, col);
+    ctx.shadowBlur = 0;
+
+    // Inner bright core
+    drawStarOfDavid(b.x, b.y, starSize * 0.5, '#ffffff');
+
     ctx.restore();
   }
 
