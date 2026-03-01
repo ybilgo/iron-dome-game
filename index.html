@@ -396,6 +396,13 @@
   <div id="highScoreDisplay" style="margin:12px auto;max-width:400px;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
 </div>
 
+<div class="overlay hidden" id="citySelectScreen" style="overflow-y:auto;padding:20px 10px;">
+  <div class="hebrew-title" style="font-size:clamp(1.2rem,4vw,1.8rem)">\u{1F30D} \u05D1\u05D7\u05E8 \u05E8\u05E7\u05E2 \u{1F30D}</div>
+  <div class="title" style="font-size:clamp(1rem,3vw,1.5rem)">CHOOSE BATTLEFIELD</div>
+  <div id="cityGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;max-width:600px;margin:15px auto;direction:ltr;"></div>
+  <div id="cityHighScoreDisplay" style="margin:12px auto;max-width:400px;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
+</div>
+
 <div class="overlay hidden" id="countdownScreen">
   <div class="countdown-num" id="countdownNum">3</div>
   <div class="countdown-sub">הכן שאגת הארי...</div>
@@ -453,7 +460,7 @@
     H = window.innerHeight;
     // On mobile, zoom out to show more game area
     if (isMobile) {
-      mobileScale = 0.45;
+      mobileScale = 0.35;
       W = Math.round(W / mobileScale);
       H = Math.round(H / mobileScale);
     }
@@ -655,40 +662,78 @@
       addFloat(W/2, H/2, '+1 LIFE  +1 HP  ⬆️', '#22ff44');
       playSfxWaveStart();
       updateHUD();
+      if (wave % 3 === 0) { currentMelodySet = (currentMelodySet + 1) % melodies.length; }
     }
   }
 
-  // ===== HIGH SCORES =====
+  // ===== SHARED ONLINE HIGH SCORES =====
+  var SCORE_BLOB_ID = '019cab07-4f86-7837-bcd1-57cd170e7f9a';
+  var SCORE_API = 'https://jsonblob.com/api/jsonBlob/' + SCORE_BLOB_ID;
+  var cachedScores = [];
   var HIGH_SCORE_KEY = 'lionRoarHighScores';
-  function getHighScores() {
-    try {
-      var data = localStorage.getItem(HIGH_SCORE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch(e) { return []; }
+
+  function getHighScores() { return cachedScores.length > 0 ? cachedScores : getLocalScores(); }
+  function getLocalScores() {
+    try { var d = localStorage.getItem(HIGH_SCORE_KEY); return d ? JSON.parse(d) : []; } catch(e) { return []; }
+  }
+  function fetchOnlineScores(cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', SCORE_API, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 5000;
+    xhr.onload = function() {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        cachedScores = (data.scores || []).sort(function(a,b) { return b.score - a.score; });
+        var local = getLocalScores();
+        for (var i = 0; i < local.length; i++) {
+          var exists = false;
+          for (var j = 0; j < cachedScores.length; j++) {
+            if (cachedScores[j].date === local[i].date && cachedScores[j].score === local[i].score) { exists = true; break; }
+          }
+          if (!exists) cachedScores.push(local[i]);
+        }
+        cachedScores.sort(function(a,b) { return b.score - a.score; });
+        cachedScores = cachedScores.slice(0, 15);
+        if (cb) cb(cachedScores);
+      } catch(e) { cachedScores = getLocalScores(); if (cb) cb(cachedScores); }
+    };
+    xhr.onerror = xhr.ontimeout = function() { cachedScores = getLocalScores(); if (cb) cb(cachedScores); };
+    xhr.send();
   }
   function saveHighScore(name, scr, wv, kills, defender) {
-    var scores = getHighScores();
-    scores.push({ name: name, score: scr, wave: wv, kills: kills, defender: defender, date: Date.now() });
-    scores.sort(function(a,b) { return b.score - a.score; });
-    scores = scores.slice(0, 10);
-    try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(scores)); } catch(e) {}
-    return scores;
+    var entry = { name: name, score: scr, wave: wv, kills: kills, defender: defender, date: Date.now() };
+    var local = getLocalScores();
+    local.push(entry); local.sort(function(a,b) { return b.score - a.score; }); local = local.slice(0, 15);
+    try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(local)); } catch(e) {}
+    cachedScores.push(entry); cachedScores.sort(function(a,b) { return b.score - a.score; }); cachedScores = cachedScores.slice(0, 15);
+    var xhr = new XMLHttpRequest();
+    xhr.open('PUT', SCORE_API, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 5000;
+    xhr.send(JSON.stringify({ scores: cachedScores, version: '3.2' }));
+    return cachedScores;
   }
   function isHighScore(scr) {
     var scores = getHighScores();
-    return scores.length < 10 || scr > (scores[scores.length - 1] || {score:0}).score;
+    return scores.length < 15 || scr > (scores[scores.length - 1] || {score:0}).score;
   }
-  function renderHighScores(targetId) {
-    var scores = getHighScores();
-    var el = document.getElementById(targetId);
-    if (!el || scores.length === 0) { if(el) el.innerHTML = ''; return; }
-    var h = '🏆 HIGH SCORES 🏆<br>';
-    for (var i = 0; i < Math.min(scores.length, 5); i++) {
-      var s = scores[i];
-      h += (i+1) + '. ' + (s.name||'???') + ' - ' + s.score + ' (Wave ' + s.wave + ')<br>';
-    }
-    el.innerHTML = h;
+  function renderHighScores(targetId, cb) {
+    var render = function(scores) {
+      var el = document.getElementById(targetId);
+      if (!el) { if(cb)cb(); return; }
+      if (!scores || scores.length === 0) { el.innerHTML = '\u{1F3C6} \u05D0\u05D9\u05DF \u05E9\u05D9\u05D0\u05D5\u05EA \u05E2\u05D3\u05D9\u05D9\u05DF - \u05EA\u05D4\u05D9\u05D4 \u05D4\u05E8\u05D0\u05E9\u05D5\u05DF! \u{1F3C6}'; if(cb)cb(); return; }
+      var h = '\u{1F3C6} HIGH SCORES \u{1F30D} \u{1F3C6}<br>';
+      for (var i = 0; i < Math.min(scores.length, 8); i++) {
+        var s = scores[i];
+        var medal = i === 0 ? '\u{1F947}' : (i === 1 ? '\u{1F948}' : (i === 2 ? '\u{1F949}' : (i+1)+'.'));
+        h += medal + ' ' + (s.name||'???') + ' - ' + s.score + ' (Wave ' + s.wave + ')<br>';
+      }
+      el.innerHTML = h; if(cb)cb();
+    };
+    fetchOnlineScores(render);
   }
+  fetchOnlineScores(function() {});
 
   // ===== BOSS ROTATION =====
   var bossCharacters = [
@@ -707,6 +752,35 @@
 
   // ===== PARALLAX BACKGROUND LAYERS =====
   var bgScroll = 0; // global scroll offset for forward motion
+
+  // City background themes
+  var selectedCity = 'telaviv';
+  var cityThemes = {
+    shiraz: { name: '\u05E9\u05D9\u05E8\u05D0\u05D6', nameEn: 'Shiraz', emoji: '\u{1F54C}',
+      skyTop: [40,15,50], skyMid: [60,20,70], skyBot: [80,30,90],
+      bldgCol: '#2a0a30', groundCol: '#1a0520', starCol: '#ffccdd',
+      windowCol1: '#ffaa44', windowCol2: '#ff88aa', cloudCols: ['rgba(80,20,60,0.15)','rgba(50,10,40,0.12)'] },
+    telaviv: { name: '\u05EA\u05DC \u05D0\u05D1\u05D9\u05D1', nameEn: 'Tel Aviv', emoji: '\u{1F3D6}',
+      skyTop: [3,8,16], skyMid: [10,22,40], skyBot: [13,27,53],
+      bldgCol: '#0a1530', groundCol: '#060e22', starCol: '#aabbee',
+      windowCol1: '#ffdd66', windowCol2: '#aaccff', cloudCols: ['rgba(30,50,120,0.15)','rgba(20,60,80,0.13)'] },
+    tehran: { name: '\u05D8\u05D4\u05E8\u05D0\u05DF', nameEn: 'Tehran', emoji: '\u{1F3D4}',
+      skyTop: [20,10,5], skyMid: [35,18,12], skyBot: [50,28,20],
+      bldgCol: '#1a1008', groundCol: '#100a04', starCol: '#ffddaa',
+      windowCol1: '#ffcc33', windowCol2: '#ff8844', cloudCols: ['rgba(60,30,10,0.18)','rgba(80,40,15,0.12)'] },
+    jerusalem: { name: '\u05D9\u05E8\u05D5\u05E9\u05DC\u05D9\u05DD', nameEn: 'Jerusalem', emoji: '\u{1F54D}',
+      skyTop: [8,5,20], skyMid: [18,15,40], skyBot: [30,25,55],
+      bldgCol: '#1a1510', groundCol: '#0f0c06', starCol: '#ffeedd',
+      windowCol1: '#ffd488', windowCol2: '#ffe0aa', cloudCols: ['rgba(40,30,20,0.15)','rgba(60,45,30,0.12)'] },
+    beersheva: { name: '\u05D1\u05D0\u05E8 \u05E9\u05D1\u05E2', nameEn: 'Beer Sheva', emoji: '\u{1F3DC}',
+      skyTop: [15,8,3], skyMid: [30,20,10], skyBot: [50,35,18],
+      bldgCol: '#1a150a', groundCol: '#120e06', starCol: '#ffeebb',
+      windowCol1: '#ffbb44', windowCol2: '#ffdd88', cloudCols: ['rgba(70,50,20,0.15)','rgba(50,35,15,0.12)'] },
+    doha: { name: '\u05D3\u05D5\u05D7\u05D0', nameEn: 'Doha', emoji: '\u{1F3D9}',
+      skyTop: [5,12,25], skyMid: [10,25,50], skyBot: [15,35,65],
+      bldgCol: '#081830', groundCol: '#040e1a', starCol: '#bbddff',
+      windowCol1: '#66ddff', windowCol2: '#44aaff', cloudCols: ['rgba(20,40,80,0.18)','rgba(15,50,90,0.15)'] }
+  };
 
   // Far stars (slow parallax - deep space)
   var bgStarsFar = [];
@@ -789,11 +863,7 @@
     grid.appendChild(startDiv);
     document.getElementById('charStartBtn').addEventListener('click', function() {
       document.getElementById('charSelectScreen').classList.add('hidden');
-      document.getElementById('countdownScreen').classList.remove('hidden');
-      runCountdown(function() {
-        document.getElementById('countdownScreen').classList.add('hidden');
-        startGame();
-      });
+      showCitySelect();
     });
     // Set initial selection display
     var sel = defenders.find(function(d) { return d.id === selectedDefender; });
@@ -805,6 +875,57 @@
 
   function beginCountdown() {
     showCharSelect();
+  }
+
+  function showCitySelect() {
+    var cs = document.getElementById('citySelectScreen');
+    cs.classList.remove('hidden');
+    buildCityGrid();
+    renderHighScores('cityHighScoreDisplay');
+  }
+
+  function buildCityGrid() {
+    var grid = document.getElementById('cityGrid');
+    grid.innerHTML = '';
+    var cityKeys = Object.keys(cityThemes);
+    for (var i = 0; i < cityKeys.length; i++) {
+      (function(key) {
+        var c = cityThemes[key];
+        var card = document.createElement('div');
+        card.className = 'char-card' + (key === selectedCity ? ' selected' : '');
+        card.innerHTML = '<div style="width:64px;height:64px;border-radius:12px;border:2px solid rgba(255,255,255,0.3);background:linear-gradient(180deg,rgb(' + c.skyTop.join(',') + '),rgb(' + c.skyBot.join(',') + '));margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">' + c.emoji + '</div><div class="char-label">' + c.name + '</div><div style="color:#888;font-size:0.65rem;">' + c.nameEn + '</div>';
+        card.addEventListener('click', function() {
+          selectedCity = key;
+          var cards = grid.querySelectorAll('.char-card');
+          for (var j = 0; j < cards.length; j++) cards[j].classList.remove('selected');
+          card.classList.add('selected');
+        });
+        grid.appendChild(card);
+      })(cityKeys[i]);
+    }
+    var startDiv = document.createElement('div');
+    startDiv.style.cssText = 'grid-column: 1 / -1; text-align: center;';
+    startDiv.innerHTML = '<button class="char-start-btn" id="cityStartBtn">\u{1F680} \u05D4\u05EA\u05D7\u05DC \u05DE\u05E9\u05D9\u05DE\u05D4! START! \u{1F680}</button>';
+    grid.appendChild(startDiv);
+    document.getElementById('cityStartBtn').addEventListener('click', function() {
+      document.getElementById('citySelectScreen').classList.add('hidden');
+      rebuildBGForCity();
+      document.getElementById('countdownScreen').classList.remove('hidden');
+      runCountdown(function() {
+        document.getElementById('countdownScreen').classList.add('hidden');
+        startGame();
+      });
+    });
+  }
+
+  function rebuildBGForCity() {
+    var c = cityThemes[selectedCity] || cityThemes.telaviv;
+    for (var i = 0; i < bgClouds.length; i++) {
+      bgClouds[i].col = c.cloudCols[i % c.cloudCols.length];
+    }
+    for (var i = 0; i < bldgLights.length; i++) {
+      bldgLights[i].col = Math.random() < 0.7 ? c.windowCol1 : c.windowCol2;
+    }
   }
 
   if (isMobile) {
@@ -881,7 +1002,7 @@
       for (var c = 0; c < cols; c++) {
         var baseHp = r === 0 ? 2 : 1;
         var isSplitter = (wave >= 20 && r === 0 && Math.random() < 0.35);
-        var isKamikaze = (wave >= 30 && r > 0 && Math.random() < 0.2);
+        var isKamikaze = false; // Removed: broke game flow
         // New enemy types for waves 10-20
         var isShielded = (wave >= 10 && wave < 25 && Math.random() < 0.2);
         var isZigzag = (wave >= 12 && Math.random() < 0.15);
@@ -1049,12 +1170,13 @@
       bgScroll += 0.8;
     }
 
-    // Sky gradient - subtle color shift based on wave
+    // Sky gradient - city themed + wave color shift
+    var ct = cityThemes[selectedCity] || cityThemes.telaviv;
     var grad = ctx.createLinearGradient(0, 0, 0, H);
     var waveColor = wave < 6 ? 0 : Math.min((wave - 6) * 3, 40);
-    grad.addColorStop(0, 'rgb(' + (3+waveColor*0.3) + ',' + (8-waveColor*0.1) + ',' + (16+waveColor*0.2) + ')');
-    grad.addColorStop(0.5, 'rgb(' + (10+waveColor*0.2) + ',' + (22-waveColor*0.2) + ',' + (40+waveColor*0.3) + ')');
-    grad.addColorStop(1, 'rgb(' + (13+waveColor*0.1) + ',' + (27-waveColor*0.15) + ',' + (53+waveColor*0.2) + ')');
+    grad.addColorStop(0, 'rgb(' + (ct.skyTop[0]+waveColor*0.3) + ',' + (ct.skyTop[1]-waveColor*0.1) + ',' + (ct.skyTop[2]+waveColor*0.2) + ')');
+    grad.addColorStop(0.5, 'rgb(' + (ct.skyMid[0]+waveColor*0.2) + ',' + (ct.skyMid[1]-waveColor*0.2) + ',' + (ct.skyMid[2]+waveColor*0.3) + ')');
+    grad.addColorStop(1, 'rgb(' + (ct.skyBot[0]+waveColor*0.1) + ',' + (ct.skyBot[1]-waveColor*0.15) + ',' + (ct.skyBot[2]+waveColor*0.2) + ')');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
@@ -1067,7 +1189,7 @@
       var sx = ((s.x - farOff) % 2000 + 2000) % 2000;
       sx = (sx / 2000) * W;
       ctx.globalAlpha = 0.2 + 0.5 * (0.5 + 0.5 * Math.sin(now * s.sp + s.ph));
-      ctx.fillStyle = '#aabbee';
+      ctx.fillStyle = ct.starCol;
       ctx.beginPath();
       ctx.arc(sx, s.y * H * 0.7, s.sz, 0, 6.28);
       ctx.fill();
@@ -1102,7 +1224,7 @@
 
     // Layer 4: Ground (fastest parallax - closest)
     var gndOff = (bgScroll * 1.2) % 3000;
-    ctx.fillStyle = '#060e22';
+    ctx.fillStyle = ct.groundCol;
     ctx.fillRect(0, H - 32, W, 32);
 
     for (var i = 0; i < bldgs.length; i++) {
@@ -1110,7 +1232,7 @@
       var bx = ((b.x - gndOff) % 3000 + 3000) % 3000;
       bx = (bx / 3000) * (W + 100) - 50;
       if (bx < -50 || bx > W + 50) continue;
-      ctx.fillStyle = '#0a1530';
+      ctx.fillStyle = ct.bldgCol;
       ctx.fillRect(bx, H - 32 - b.h, b.w, b.h);
     }
     // Building window lights
@@ -1909,6 +2031,7 @@
         gameState = PLAYING;
         if (wave % 3 === 0) {
           spawnBoss();
+          darbukaPlaying = true;
         } else {
           spawnWave();
         }
@@ -1974,21 +2097,7 @@
       }
     }
 
-    // Kamikaze behavior: random enemies break formation and dive at player
-    if (wave >= 30) {
-      for (var ki = 0; ki < enemies.length; ki++) {
-        var ke = enemies[ki];
-        if (ke.kamikaze && !ke.kamikazeActive && Math.random() < 0.001) {
-          ke.kamikazeActive = true;
-        }
-        if (ke.kamikazeActive) {
-          var kdx = px - ke.x, kdy = py - ke.y;
-          var kd = Math.sqrt(kdx*kdx + kdy*kdy) || 1;
-          ke.x += (kdx/kd) * 3.5;
-          ke.y += (kdy/kd) * 3.5;
-        }
-      }
-    }
+    // Kamikaze enemies removed in V3.2
     // Update stealth plane
     if (stealthPlane) {
       stealthPlane.x += 8;
@@ -2065,7 +2174,8 @@
     // Guaranteed power-up every 10 seconds
     if (gameState === PLAYING) {
       guaranteedPowerUpTimer += dt;
-      if (guaranteedPowerUpTimer >= 10) {
+      var puInterval = wave < 15 ? 10 : Math.max(3, 10 - Math.floor((wave - 15) / 10) * 2);
+      if (guaranteedPowerUpTimer >= puInterval) {
         guaranteedPowerUpTimer = 0;
         // Drop from random X at top of screen
         var gpx = 50 + Math.random() * (W - 100);
@@ -2785,6 +2895,91 @@
     0, 0, 440.0, 0, 523.3, 0, 0, 0
   ];
 
+  // === MELODY 2: Upbeat A minor / Middle Eastern ===
+  var melodyNotes2 = [
+    440.0, 0, 493.9, 523.3, 0, 587.3, 0, 659.3, 0, 587.3, 523.3, 0, 493.9, 440.0, 0, 0,
+    440.0, 0, 523.3, 0, 659.3, 698.5, 0, 659.3, 587.3, 0, 523.3, 493.9, 0, 440.0, 0, 0,
+    659.3, 0, 784.0, 0, 880.0, 0, 784.0, 698.5, 0, 659.3, 0, 587.3, 659.3, 0, 784.0, 0,
+    698.5, 659.3, 0, 587.3, 0, 523.3, 0, 493.9, 440.0, 0, 0, 493.9, 440.0, 0, 0, 0
+  ];
+  var bassNotes2 = [
+    220.0, 0, 0, 220.0, 0, 0, 220.0, 0, 0, 0, 261.6, 0, 220.0, 0, 0, 0,
+    174.6, 0, 0, 174.6, 0, 0, 196.0, 0, 0, 196.0, 0, 0, 196.0, 0, 0, 0,
+    261.6, 0, 0, 261.6, 0, 0, 196.0, 0, 0, 196.0, 0, 0, 220.0, 0, 0, 0,
+    293.7, 0, 0, 293.7, 0, 0, 329.6, 0, 0, 0, 329.6, 0, 329.6, 0, 0, 0
+  ];
+  var arpNotes2 = [
+    659.3, 0, 523.3, 0, 784.0, 0, 659.3, 0, 784.0, 0, 659.3, 0, 523.3, 0, 659.3, 0,
+    523.3, 0, 440.0, 0, 587.3, 0, 440.0, 0, 587.3, 0, 440.0, 0, 523.3, 0, 587.3, 0,
+    784.0, 0, 659.3, 0, 880.0, 0, 784.0, 0, 880.0, 0, 784.0, 0, 659.3, 0, 784.0, 0,
+    659.3, 0, 523.3, 0, 587.3, 0, 523.3, 0, 0, 0, 523.3, 0, 587.3, 0, 0, 0
+  ];
+
+  // === MELODY 3: E phrygian aggressive ===
+  var melodyNotes3 = [
+    329.6, 0, 349.2, 329.6, 0, 293.7, 0, 329.6, 0, 349.2, 392.0, 0, 349.2, 329.6, 0, 0,
+    440.0, 0, 392.0, 0, 349.2, 329.6, 0, 293.7, 329.6, 0, 349.2, 0, 329.6, 0, 0, 0,
+    523.3, 0, 493.9, 0, 440.0, 0, 392.0, 349.2, 0, 329.6, 0, 349.2, 392.0, 0, 440.0, 0,
+    392.0, 349.2, 0, 329.6, 0, 293.7, 0, 329.6, 349.2, 0, 0, 329.6, 293.7, 0, 0, 0
+  ];
+  var bassNotes3 = [
+    164.8, 0, 0, 164.8, 0, 0, 164.8, 0, 0, 0, 174.6, 0, 164.8, 0, 0, 0,
+    146.8, 0, 0, 146.8, 0, 0, 164.8, 0, 0, 164.8, 0, 0, 164.8, 0, 0, 0,
+    174.6, 0, 0, 174.6, 0, 0, 146.8, 0, 0, 146.8, 0, 0, 164.8, 0, 0, 0,
+    130.8, 0, 0, 130.8, 0, 0, 146.8, 0, 0, 0, 146.8, 0, 164.8, 0, 0, 0
+  ];
+  var arpNotes3 = [
+    493.9, 0, 392.0, 0, 523.3, 0, 493.9, 0, 523.3, 0, 493.9, 0, 392.0, 0, 493.9, 0,
+    440.0, 0, 349.2, 0, 493.9, 0, 440.0, 0, 440.0, 0, 349.2, 0, 392.0, 0, 440.0, 0,
+    523.3, 0, 440.0, 0, 587.3, 0, 523.3, 0, 523.3, 0, 493.9, 0, 440.0, 0, 493.9, 0,
+    440.0, 0, 349.2, 0, 392.0, 0, 349.2, 0, 0, 0, 349.2, 0, 392.0, 0, 0, 0
+  ];
+
+  var currentMelodySet = 0;
+  var melodies = [
+    { m: melodyNotes, b: bassNotes, a: arpNotes },
+    { m: melodyNotes2, b: bassNotes2, a: arpNotes2 },
+    { m: melodyNotes3, b: bassNotes3, a: arpNotes3 }
+  ];
+  function getActiveMelody() { return melodies[currentMelodySet % melodies.length]; }
+
+  // === DARBUKA for boss battles ===
+  var darbukaPlaying = false;
+  function playDarbuka(startTime) {
+    if (!musicCtx) return;
+    function doum(t) {
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(50, t + 0.15);
+      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.25);
+    }
+    function tek(t) {
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(800, t);
+      o.frequency.exponentialRampToValueAtTime(400, t + 0.03);
+      g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      var n = musicCtx.createOscillator(); var ng = musicCtx.createGain();
+      n.type = 'sawtooth'; n.frequency.value = 4000 + Math.random() * 2000;
+      ng.gain.setValueAtTime(0.08, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      o.connect(g); g.connect(musicGain); n.connect(ng); ng.connect(musicGain);
+      o.start(t); o.stop(t + 0.1); n.start(t); n.stop(t + 0.05);
+    }
+    function ka(t) {
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(500, t);
+      o.frequency.exponentialRampToValueAtTime(250, t + 0.04);
+      g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.08);
+    }
+    var beat = 60 / musicBPM;
+    var t = startTime;
+    doum(t); tek(t+beat*0.5); tek(t+beat*0.75);
+    doum(t+beat); tek(t+beat*1.5); ka(t+beat*1.75);
+    tek(t+beat*2); tek(t+beat*2.25); doum(t+beat*2.5);
+    tek(t+beat*3); ka(t+beat*3.25); tek(t+beat*3.5); tek(t+beat*3.75);
+  }
+
   function scheduleBar() {
     if (!musicCtx || !musicPlaying) return;
     var stepDur = 60 / musicBPM / 4; // 16th note
@@ -2792,21 +2987,27 @@
 
     for (var i = 0; i < 32; i++) {
       var t = now + i * stepDur;
-      var idx = (musicStep + i) % melodyNotes.length;
+      var ml = getActiveMelody();
+      var idx = (musicStep + i) % ml.m.length;
 
       // Lead synth with character
-      if (melodyNotes[idx] > 0) {
-        playSynth(melodyNotes[idx], t, stepDur * 2.5, 0.07, idx % 8 < 4);
+      if (ml.m[idx] > 0) {
+        playSynth(ml.m[idx], t, stepDur * 2.5, 0.07, idx % 8 < 4);
       }
 
       // Bass (only on non-zero)
-      if (bassNotes[idx] > 0) {
-        playBass(bassNotes[idx], t, stepDur * 3);
+      if (ml.b[idx] > 0) {
+        playBass(ml.b[idx], t, stepDur * 3);
       }
 
       // Arp layer (soft shimmer)
-      if (arpNotes[idx] > 0 && i % 2 === 0) {
-        playArp(arpNotes[idx], t, stepDur * 1.5);
+      if (ml.a[idx] > 0 && i % 2 === 0) {
+        playArp(ml.a[idx], t, stepDur * 1.5);
+      }
+
+      // Darbuka during boss fights
+      if (darbukaPlaying && i % 16 === 0) {
+        playDarbuka(t);
       }
 
       // === DRUM PATTERN (more interesting) ===
@@ -2825,7 +3026,7 @@
       if (beat === 5) playDrum('openhat', t);
     }
 
-    musicStep = (musicStep + 32) % melodyNotes.length;
+    musicStep = (musicStep + 32) % getActiveMelody().m.length;
   }
 
   function startMusic() {
@@ -2999,6 +3200,7 @@
   function startGame() {
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('citySelectScreen').classList.add('hidden');
     document.getElementById('countdownScreen').classList.add('hidden');
     document.getElementById('hud').style.display = 'flex';
     if (isMobile) document.getElementById('mobileControls').style.display = 'flex';
@@ -3044,6 +3246,7 @@
     updateStealthBtn();
     gameState = WAVE_INTRO;
     waveTimer = 2.0;
+    currentMelodySet = 0; darbukaPlaying = false;
     startMusic();
   }
 
