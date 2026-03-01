@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>כיפת ברזל - Iron Dome Defense V2</title>
+<title>שאגת הארי - Lion's Roar Defense</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -318,9 +318,9 @@
 <body>
 
 <div class="overlay" id="startScreen">
-  <div class="hebrew-title">🇮🇱 כיפת ברזל 🇮🇱</div>
-  <div class="title">IRON DOME</div>
-  <div class="subtitle">DEFENSE FORCE V2</div>
+  <div class="hebrew-title">🇮🇱 שאגת הארי 🇮🇱</div>
+  <div class="title">LION'S ROAR</div>
+  <div class="subtitle">IRON DOME DEFENSE</div>
   <div class="motto">עם ישראל חי! 💪</div>
   <div class="flag-icon">
     <div class="flag-bg"></div>
@@ -335,7 +335,7 @@
 
 <div class="overlay hidden" id="countdownScreen">
   <div class="countdown-num" id="countdownNum">3</div>
-  <div class="countdown-sub">הכן כיפת ברזל...</div>
+  <div class="countdown-sub">הכן שאגת הארי...</div>
 </div>
 
 <div class="gameover-overlay hidden" id="gameOverScreen">
@@ -474,7 +474,7 @@
   var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
   document.getElementById('instrText').textContent = isMobile
-    ? 'אגודל שמאל = ירי | אגודל ימין = תזוזה 🛡️'
+    ? '👆 לחץ להתחיל! | אגודל שמאל = ירי | אגודל ימין = תזוזה'
     : '← → ↑ ↓ לתזוזה  |  SPACE לירי  |  S למטוס חמקן';
 
   // BG stars
@@ -492,34 +492,54 @@
   // Boss colors for each appearance
   var bossColors = ['#44aa44', '#dd4444', '#4488ff', '#ffaa00', '#ff44ff', '#44ffff', '#ff8800', '#aa44ff'];
 
-  // ===== AUTO-START SEQUENCE =====
-  setTimeout(function() {
+  // ===== START SEQUENCE =====
+  function beginCountdown() {
+    ensureAudioReady();
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('countdownScreen').classList.remove('hidden');
     runCountdown(function() {
       document.getElementById('countdownScreen').classList.add('hidden');
       startGame();
     });
-  }, 2500);
+  }
+
+  if (isMobile) {
+    // Mobile: require tap to start (needed for audio unlock)
+    var startScr = document.getElementById('startScreen');
+    var tapStarted = false;
+    startScr.addEventListener('touchstart', function() {
+      if (!tapStarted) { tapStarted = true; beginCountdown(); }
+    }, { passive: true });
+    startScr.addEventListener('click', function() {
+      if (!tapStarted) { tapStarted = true; beginCountdown(); }
+    });
+  } else {
+    // Desktop: auto-start after 2.5s
+    setTimeout(beginCountdown, 2500);
+  }
 
   function runCountdown(cb) {
     var numEl = document.getElementById('countdownNum');
     numEl.textContent = '3';
     numEl.className = 'countdown-num';
     numEl.style.animation = 'none'; numEl.offsetHeight; numEl.style.animation = '';
+    playSfxBeep(3);
 
     setTimeout(function() {
       numEl.textContent = '2';
       numEl.className = 'countdown-num c2';
       numEl.style.animation = 'none'; numEl.offsetHeight; numEl.style.animation = '';
+      playSfxBeep(2);
       setTimeout(function() {
         numEl.textContent = '1';
         numEl.className = 'countdown-num c1';
         numEl.style.animation = 'none'; numEl.offsetHeight; numEl.style.animation = '';
+        playSfxBeep(1);
         setTimeout(function() {
           numEl.textContent = '!GO';
           numEl.className = 'countdown-num go';
           numEl.style.animation = 'none'; numEl.offsetHeight; numEl.style.animation = '';
+          playSfxBeep(0);
           setTimeout(cb, 600);
         }, 900);
       }, 900);
@@ -629,12 +649,20 @@
   }
 
   // ===== SPAWN POWERUP =====
+  var shieldTimer = 0; // shield power-up: temporary invincibility
   function maybeSpawnPowerUp(x, y) {
-    if (Math.random() > 0.12) return;
+    if (Math.random() > 0.14) return;
     var types = ['fireRate', 'split2', 'split3', 'split4', 'explosive', 'piercing', 'electric'];
+    // From wave 9+: add hearts and shields
+    if (wave >= 9) {
+      types.push('heart', 'heart', 'shield'); // hearts more common
+    }
+    if (wave >= 12) {
+      types.push('heart', 'shield'); // even more at nightmare
+    }
     var t = types[Math.floor(Math.random() * types.length)];
-    var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff' };
-    var labels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP' };
+    var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff' };
+    var labels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '❤️', shield: '🛡️' };
     powerUps.push({ x: x, y: y, type: t, color: colors[t], label: labels[t], life: 8, vy: 0.8 });
   }
 
@@ -1494,6 +1522,7 @@
           boss.hp -= dmg;
           boss.flash = 0.1;
           interceptFX(b.x, b.y);
+          playSfxHit();
           addFloat(b.x, b.y - 10, '-' + dmg, '#ff8844');
 
           if (b.ammoType !== 2) {
@@ -1558,6 +1587,7 @@
 
           e.hp -= dmg;
           e.flash = 0.15;
+          playSfxHit();
           if (e.hp <= 0) {
             comboCount++;
             comboTimer = 2.5;
@@ -1566,6 +1596,7 @@
             totalKills++;
             killsSinceLastStealth++;
             boom(e.x, e.y);
+            playSfxKill();
             addFloat(e.x, e.y - 12, '+' + pts, comboCount > 3 ? '#fbbf24' : '#60a5fa');
             maybeSpawnPowerUp(e.x, e.y);
             enemies.splice(ei, 1);
@@ -1619,6 +1650,7 @@
       updateHUD();
       gameState = WAVE_INTRO;
       waveTimer = 2.0;
+      playSfxWaveStart();
     }
 
     updateHUD();
@@ -1629,6 +1661,7 @@
     totalKills += 10;
     killsSinceLastStealth += 10;
     bigBoom(boss.x, boss.y);
+    playSfxBossDeath();
     addFloat(boss.x, boss.y, 'BOSS DEFEATED!', '#ffd700');
     addFloat(boss.x, boss.y + 30, '+' + (boss.maxHp * 20), '#fbbf24');
 
@@ -1643,6 +1676,8 @@
     updateHUD();
     gameState = WAVE_INTRO;
     waveTimer = 2.5;
+    // Fanfare plays after the boss death cry finishes
+    setTimeout(function() { playSfxWaveStart(); }, 1400);
   }
 
   function fireBullets() {
@@ -1665,9 +1700,34 @@
   }
 
   function collectPowerUp(pu) {
-    powerUpTimer = 12;
     addFloat(pu.x, pu.y - 15, pu.label + '!', pu.color);
 
+    if (pu.type === 'heart') {
+      // Restore 1 HP (or +1 life if HP full)
+      if (playerHP < maxPlayerHP) {
+        playerHP++;
+        addFloat(pu.x, pu.y - 30, '+1 HP', '#ff3366');
+      } else if (maxPlayerHP < 6) {
+        maxPlayerHP++;
+        playerHP = maxPlayerHP;
+        addFloat(pu.x, pu.y - 30, 'MAX HP UP!', '#ff3366');
+      } else {
+        score += 500;
+        addFloat(pu.x, pu.y - 30, '+500', '#ffd700');
+      }
+      addP(pu.x, pu.y, '#ff3366', 15, 2);
+      updateHUD();
+      return;
+    }
+    if (pu.type === 'shield') {
+      shieldTimer = 8; // 8 seconds of invincibility
+      pInvincible = 8;
+      addFloat(pu.x, pu.y - 30, 'SHIELD 8s!', '#44ddff');
+      addP(pu.x, pu.y, '#44ddff', 20, 3);
+      return;
+    }
+
+    powerUpTimer = 12;
     switch (pu.type) {
       case 'fireRate': fireRateMultiplier = 2.5; break;
       case 'split2': shotStreams = 2; break;
@@ -1708,7 +1768,7 @@
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalWave').textContent = 'הגעת לגל ' + wave + ' | השמדת ' + totalKills + ' טילים';
 
-    var msgs = ['עם ישראל חי! 🇮🇱','כיפת הברזל מגינה עלינו! 🛡️','ביחד ננצח! 💪','Am Yisrael Chai! 🇮🇱','ישראל חזקה! 💙'];
+    var msgs = ['עם ישראל חי! 🇮🇱','שאגת הארי! 🦁','ביחד ננצח! 💪','Am Yisrael Chai! 🇮🇱','ישראל חזקה! 💙'];
     document.getElementById('endMessage').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 
     document.getElementById('tapHint').style.display = 'none';
@@ -1730,11 +1790,14 @@
     el.innerHTML = html;
   }
 
-  // ===== LO-FI SYNTH GAME MUSIC ENGINE =====
+  // ===== LO-FI SYNTH GAME MUSIC ENGINE V2 =====
   var musicCtx = null;
   var musicPlaying = false;
   var musicGain = null;
-  var musicBPM = 128;
+  var delayNode = null;
+  var delayGain = null;
+  var filterNode = null;
+  var musicBPM = 132;
   var musicStep = 0;
   var musicInterval = null;
 
@@ -1743,139 +1806,447 @@
     try {
       musicCtx = new (window.AudioContext || window.webkitAudioContext)();
       musicGain = musicCtx.createGain();
-      musicGain.gain.value = 0.18;
+      musicGain.gain.value = 0.20;
+
+      // === DELAY EFFECT (ping-pong style) ===
+      delayNode = musicCtx.createDelay(1.0);
+      delayNode.delayTime.value = 60 / musicBPM * 0.75; // dotted-8th delay
+      delayGain = musicCtx.createGain();
+      delayGain.gain.value = 0.30; // feedback amount
+      // Lo-fi filter on delay return
+      filterNode = musicCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = 2200;
+      filterNode.Q.value = 1.5;
+
+      // Routing: musicGain -> dest + delay -> filter -> delayGain -> delay (feedback)
       musicGain.connect(musicCtx.destination);
+      musicGain.connect(delayNode);
+      delayNode.connect(filterNode);
+      filterNode.connect(delayGain);
+      delayGain.connect(musicCtx.destination);
+      delayGain.connect(delayNode); // feedback loop
     } catch(e) { return; }
   }
 
-  function playNote(freq, startTime, dur, type, vol, dest) {
-    if (!musicCtx) return;
-    var osc = musicCtx.createOscillator();
+  // Synth with character: PWM-like effect using 2 detuned oscillators + filter sweep
+  function playSynth(freq, startTime, dur, vol, bright) {
+    if (!musicCtx || freq <= 0) return;
     var g = musicCtx.createGain();
-    osc.type = type || 'square';
-    osc.frequency.value = freq;
-    g.gain.setValueAtTime(vol || 0.12, startTime);
+    var flt = musicCtx.createBiquadFilter();
+    flt.type = 'lowpass';
+    flt.frequency.setValueAtTime(bright ? 3500 : 1800, startTime);
+    flt.frequency.exponentialRampToValueAtTime(bright ? 1200 : 600, startTime + dur * 0.8);
+    flt.Q.value = 4;
+
+    // Osc 1: square, slightly sharp
+    var o1 = musicCtx.createOscillator();
+    o1.type = 'square'; o1.frequency.value = freq * 1.004;
+    // Osc 2: sawtooth, slightly flat
+    var o2 = musicCtx.createOscillator();
+    o2.type = 'sawtooth'; o2.frequency.value = freq * 0.996;
+
+    var mix = musicCtx.createGain();
+    mix.gain.value = 0.5;
+    o1.connect(mix); o2.connect(mix);
+    mix.connect(flt); flt.connect(g); g.connect(musicGain);
+
+    g.gain.setValueAtTime(vol || 0.08, startTime);
+    g.gain.setValueAtTime(vol * 0.9, startTime + 0.02);
     g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
-    osc.connect(g);
-    g.connect(dest || musicGain);
-    osc.start(startTime);
-    osc.stop(startTime + dur + 0.05);
+    o1.start(startTime); o1.stop(startTime + dur + 0.05);
+    o2.start(startTime); o2.stop(startTime + dur + 0.05);
+  }
+
+  // Fat bass: sub sine + mid saw
+  function playBass(freq, startTime, dur) {
+    if (!musicCtx || freq <= 0) return;
+    var g = musicCtx.createGain();
+    g.gain.setValueAtTime(0.14, startTime);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+    // Sub sine
+    var sub = musicCtx.createOscillator();
+    sub.type = 'sine'; sub.frequency.value = freq;
+    var subG = musicCtx.createGain(); subG.gain.value = 0.7;
+    sub.connect(subG); subG.connect(g);
+
+    // Mid saw with filter
+    var saw = musicCtx.createOscillator();
+    saw.type = 'sawtooth'; saw.frequency.value = freq * 2;
+    var flt = musicCtx.createBiquadFilter();
+    flt.type = 'lowpass'; flt.frequency.value = 400; flt.Q.value = 2;
+    var sawG = musicCtx.createGain(); sawG.gain.value = 0.3;
+    saw.connect(flt); flt.connect(sawG); sawG.connect(g);
+
+    g.connect(musicGain);
+    sub.start(startTime); sub.stop(startTime + dur + 0.05);
+    saw.start(startTime); saw.stop(startTime + dur + 0.05);
+  }
+
+  // Arp/pad: filtered triangle for atmosphere
+  function playArp(freq, startTime, dur) {
+    if (!musicCtx || freq <= 0) return;
+    var o = musicCtx.createOscillator();
+    o.type = 'triangle'; o.frequency.value = freq;
+    var g = musicCtx.createGain();
+    g.gain.setValueAtTime(0.04, startTime);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+    o.connect(g); g.connect(musicGain);
+    o.start(startTime); o.stop(startTime + dur + 0.05);
   }
 
   function playDrum(type, startTime) {
     if (!musicCtx) return;
-    var osc = musicCtx.createOscillator();
-    var g = musicCtx.createGain();
-    osc.connect(g); g.connect(musicGain);
-
     if (type === 'kick') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(150, startTime);
-      osc.frequency.exponentialRampToValueAtTime(30, startTime + 0.12);
-      g.gain.setValueAtTime(0.35, startTime);
-      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
-      osc.start(startTime); osc.stop(startTime + 0.25);
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(160, startTime);
+      o.frequency.exponentialRampToValueAtTime(35, startTime + 0.15);
+      g.gain.setValueAtTime(0.38, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+      // Click transient
+      var cl = musicCtx.createOscillator(); var cg = musicCtx.createGain();
+      cl.type = 'square'; cl.frequency.value = 800;
+      cg.gain.setValueAtTime(0.12, startTime);
+      cg.gain.exponentialRampToValueAtTime(0.001, startTime + 0.015);
+      o.connect(g); g.connect(musicGain);
+      cl.connect(cg); cg.connect(musicGain);
+      o.start(startTime); o.stop(startTime + 0.3);
+      cl.start(startTime); cl.stop(startTime + 0.02);
     } else if (type === 'snare') {
-      // Noise-like snare using high-freq oscillator
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(300, startTime);
-      osc.frequency.linearRampToValueAtTime(100, startTime + 0.08);
-      g.gain.setValueAtTime(0.18, startTime);
-      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.1);
-      osc.start(startTime); osc.stop(startTime + 0.15);
-      // Add noise component
-      var n = musicCtx.createOscillator();
-      var ng = musicCtx.createGain();
-      n.type = 'sawtooth'; n.frequency.value = 3500;
-      ng.gain.setValueAtTime(0.08, startTime);
-      ng.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
-      n.connect(ng); ng.connect(musicGain);
-      n.start(startTime); n.stop(startTime + 0.12);
+      // Body
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(250, startTime);
+      o.frequency.linearRampToValueAtTime(120, startTime + 0.06);
+      g.gain.setValueAtTime(0.15, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+      o.connect(g); g.connect(musicGain);
+      o.start(startTime); o.stop(startTime + 0.15);
+      // Noise layers
+      for (var ni = 0; ni < 3; ni++) {
+        var n = musicCtx.createOscillator(); var ng = musicCtx.createGain();
+        n.type = 'sawtooth'; n.frequency.value = 3000 + ni * 1500 + Math.random() * 1000;
+        ng.gain.setValueAtTime(0.06, startTime);
+        ng.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06 + ni * 0.02);
+        n.connect(ng); ng.connect(musicGain);
+        n.start(startTime); n.stop(startTime + 0.1 + ni * 0.02);
+      }
     } else if (type === 'hat') {
-      osc.type = 'square';
-      osc.frequency.value = 6000 + Math.random() * 2000;
-      g.gain.setValueAtTime(0.04, startTime);
-      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.04);
-      osc.start(startTime); osc.stop(startTime + 0.06);
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'square'; o.frequency.value = 7000 + Math.random() * 3000;
+      g.gain.setValueAtTime(0.035, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.035);
+      o.connect(g); g.connect(musicGain);
+      o.start(startTime); o.stop(startTime + 0.05);
+    } else if (type === 'openhat') {
+      var o = musicCtx.createOscillator(); var g = musicCtx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 5500;
+      g.gain.setValueAtTime(0.03, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
+      o.connect(g); g.connect(musicGain);
+      o.start(startTime); o.stop(startTime + 0.2);
+    } else if (type === 'clap') {
+      for (var ci = 0; ci < 4; ci++) {
+        var c = musicCtx.createOscillator(); var cg = musicCtx.createGain();
+        c.type = 'sawtooth'; c.frequency.value = 2000 + Math.random() * 2000;
+        cg.gain.setValueAtTime(0.05, startTime + ci * 0.01);
+        cg.gain.exponentialRampToValueAtTime(0.001, startTime + ci * 0.01 + 0.06);
+        c.connect(cg); cg.connect(musicGain);
+        c.start(startTime + ci * 0.01); c.stop(startTime + ci * 0.01 + 0.08);
+      }
     }
   }
 
-  // Hatikvah-inspired lo-fi melody (D minor, heroic feel)
+  // D minor Hatikvah-inspired melody with rhythmic variation
+  // 0 = rest, notes are freq in Hz. 64 steps = 4 bars of 16th notes
+  // D4=293.7 E4=329.6 F4=349.2 G4=392 A4=440 Bb4=466.2 C5=523.3 D5=587.3
   var melodyNotes = [
-    // Bar 1-2: Iconic Hatikvah opening motif (lo-fi adaptation)
-    293.7, 329.6, 349.2, 392.0, 440.0, 392.0, 349.2, 329.6,
-    293.7, 261.6, 293.7, 349.2, 329.6, 293.7, 261.6, 246.9,
-    // Bar 3-4: Development
-    293.7, 349.2, 392.0, 440.0, 493.9, 440.0, 392.0, 349.2,
-    329.6, 349.2, 392.0, 349.2, 329.6, 293.7, 329.6, 293.7,
-    // Bar 5-6: Ascending heroic passage
-    220.0, 261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9,
-    523.3, 493.9, 440.0, 392.0, 440.0, 493.9, 523.3, 440.0,
-    // Bar 7-8: Resolution
-    349.2, 392.0, 440.0, 523.3, 493.9, 440.0, 392.0, 349.2,
-    293.7, 329.6, 349.2, 293.7, 261.6, 293.7, 220.0, 0
+    // Bar 1: Hatikvah opening - "Kol od balevav" motif with syncopation
+    293.7, 0, 329.6, 349.2, 0, 392.0, 0, 440.0,
+    0, 392.0, 349.2, 0, 329.6, 293.7, 0, 0,
+    // Bar 2: Response phrase - ascending with tension
+    293.7, 0, 349.2, 0, 440.0, 466.2, 0, 440.0,
+    392.0, 0, 349.2, 329.6, 0, 293.7, 0, 0,
+    // Bar 3: Soaring section - emotional peak
+    440.0, 0, 523.3, 0, 587.3, 0, 523.3, 466.2,
+    0, 440.0, 0, 392.0, 440.0, 0, 523.3, 0,
+    // Bar 4: Resolution descent
+    466.2, 440.0, 0, 392.0, 0, 349.2, 0, 329.6,
+    293.7, 0, 0, 329.6, 293.7, 0, 0, 0,
+    // Bar 5: Second verse - minor variation with octave jump
+    293.7, 0, 329.6, 0, 349.2, 392.0, 0, 0,
+    440.0, 0, 0, 523.3, 0, 466.2, 440.0, 0,
+    // Bar 6: Driving energy
+    392.0, 0, 440.0, 0, 466.2, 0, 523.3, 587.3,
+    0, 523.3, 0, 0, 466.2, 440.0, 0, 0,
+    // Bar 7: Climax - high sustained feel
+    587.3, 0, 0, 523.3, 0, 587.3, 0, 0,
+    523.3, 466.2, 0, 440.0, 0, 392.0, 440.0, 0,
+    // Bar 8: Final resolution
+    349.2, 0, 392.0, 0, 349.2, 329.6, 0, 293.7,
+    0, 0, 329.6, 293.7, 0, 0, 0, 0
   ];
 
-  // Bass line (root notes, D minor)
+  // Bass: D minor progression with movement
   var bassNotes = [
-    146.8, 0, 146.8, 0, 174.6, 0, 174.6, 0,
-    130.8, 0, 130.8, 0, 146.8, 0, 146.8, 0,
-    146.8, 0, 174.6, 0, 196.0, 0, 196.0, 0,
-    164.8, 0, 164.8, 0, 146.8, 0, 146.8, 0,
-    110.0, 0, 130.8, 0, 146.8, 0, 174.6, 0,
-    196.0, 0, 196.0, 0, 220.0, 0, 220.0, 0,
-    174.6, 0, 196.0, 0, 220.0, 0, 174.6, 0,
-    146.8, 0, 146.8, 0, 130.8, 0, 110.0, 0
+    // Dm
+    146.8, 0, 0, 146.8, 0, 0, 146.8, 0,
+    0, 0, 174.6, 0, 146.8, 0, 0, 0,
+    // Bb -> C
+    116.5, 0, 0, 116.5, 0, 0, 130.8, 0,
+    0, 130.8, 0, 0, 130.8, 0, 0, 0,
+    // F -> C
+    174.6, 0, 0, 174.6, 0, 0, 130.8, 0,
+    0, 130.8, 0, 0, 146.8, 0, 0, 0,
+    // Gm -> A
+    196.0, 0, 0, 196.0, 0, 0, 220.0, 0,
+    0, 0, 220.0, 0, 220.0, 0, 0, 0,
+    // Dm
+    146.8, 0, 0, 146.8, 0, 0, 146.8, 0,
+    0, 0, 174.6, 0, 146.8, 0, 0, 0,
+    // Bb -> F
+    116.5, 0, 0, 116.5, 0, 0, 174.6, 0,
+    0, 174.6, 0, 0, 174.6, 0, 0, 0,
+    // Gm -> A
+    196.0, 0, 0, 196.0, 0, 196.0, 0, 220.0,
+    0, 220.0, 0, 0, 220.0, 0, 0, 0,
+    // Dm resolve
+    146.8, 0, 0, 146.8, 0, 0, 146.8, 0,
+    0, 0, 146.8, 0, 0, 0, 0, 0
+  ];
+
+  // Arp pattern: chord tones cycling (adds shimmer)
+  var arpNotes = [
+    587.3, 0, 440.0, 0, 523.3, 0, 440.0, 0,
+    587.3, 0, 440.0, 0, 523.3, 0, 440.0, 0,
+    466.2, 0, 349.2, 0, 440.0, 0, 523.3, 0,
+    523.3, 0, 392.0, 0, 440.0, 0, 523.3, 0,
+    698.5, 0, 523.3, 0, 587.3, 0, 523.3, 0,
+    523.3, 0, 440.0, 0, 523.3, 0, 587.3, 0,
+    784.0, 0, 587.3, 0, 698.5, 0, 587.3, 0,
+    587.3, 0, 440.0, 0, 523.3, 0, 440.0, 0,
+    587.3, 0, 440.0, 0, 523.3, 0, 440.0, 0,
+    587.3, 0, 440.0, 0, 523.3, 0, 440.0, 0,
+    466.2, 0, 349.2, 0, 698.5, 0, 523.3, 0,
+    698.5, 0, 523.3, 0, 587.3, 0, 523.3, 0,
+    784.0, 0, 587.3, 0, 698.5, 0, 784.0, 0,
+    698.5, 0, 587.3, 0, 523.3, 0, 587.3, 0,
+    587.3, 0, 440.0, 0, 523.3, 0, 440.0, 0,
+    0, 0, 440.0, 0, 523.3, 0, 0, 0
   ];
 
   function scheduleBar() {
     if (!musicCtx || !musicPlaying) return;
-    var stepDur = 60 / musicBPM / 2; // 16th-note duration at BPM
-    var now = musicCtx.currentTime;
+    var stepDur = 60 / musicBPM / 4; // 16th note
+    var now = musicCtx.currentTime + 0.05; // small look-ahead
 
-    for (var i = 0; i < 16; i++) {
+    for (var i = 0; i < 32; i++) {
       var t = now + i * stepDur;
       var idx = (musicStep + i) % melodyNotes.length;
 
-      // Melody - detuned square wave (lo-fi feel)
+      // Lead synth with character
       if (melodyNotes[idx] > 0) {
-        playNote(melodyNotes[idx] * 0.997, t, stepDur * 1.5, 'square', 0.06);
-        playNote(melodyNotes[idx] * 1.003, t, stepDur * 1.5, 'square', 0.06);
+        playSynth(melodyNotes[idx], t, stepDur * 2.5, 0.07, idx % 8 < 4);
       }
 
-      // Bass - saw wave sub
+      // Bass (only on non-zero)
       if (bassNotes[idx] > 0) {
-        playNote(bassNotes[idx], t, stepDur * 1.8, 'sawtooth', 0.10);
+        playBass(bassNotes[idx], t, stepDur * 3);
       }
 
-      // Drums: kick on 1, 5, 9, 13  |  snare on 5, 13  |  hat on every other
-      if (i % 4 === 0) playDrum('kick', t);
-      if (i % 8 === 4) playDrum('snare', t);
-      if (i % 2 === 0) playDrum('hat', t);
-      // Extra ghost hi-hats for groove
-      if (i % 4 === 3 && Math.random() > 0.4) playDrum('hat', t - stepDur * 0.25);
+      // Arp layer (soft shimmer)
+      if (arpNotes[idx] > 0 && i % 2 === 0) {
+        playArp(arpNotes[idx], t, stepDur * 1.5);
+      }
+
+      // === DRUM PATTERN (more interesting) ===
+      var beat = i % 16; // within each bar of 16 16th-notes
+      // Kick: 1, and-of-3, 1 (syncopated)
+      if (beat === 0 || beat === 6 || beat === 10) playDrum('kick', t);
+      // Snare: 4, 12 (2 and 4)
+      if (beat === 4 || beat === 12) playDrum('snare', t);
+      // Clap layered on beat 12 every other bar
+      if (beat === 12 && i >= 16) playDrum('clap', t);
+      // Hats: running 8ths with some 16th ghost notes
+      if (beat % 2 === 0) playDrum('hat', t);
+      if ((beat === 3 || beat === 7 || beat === 11 || beat === 15) && Math.random() > 0.3)
+        playDrum('hat', t);
+      // Open hat on the "and" of 2
+      if (beat === 5) playDrum('openhat', t);
     }
 
-    musicStep = (musicStep + 16) % melodyNotes.length;
+    musicStep = (musicStep + 32) % melodyNotes.length;
   }
 
   function startMusic() {
+    ensureAudioReady();
     initMusic();
     if (!musicCtx) return;
     if (musicCtx.state === 'suspended') musicCtx.resume();
     musicPlaying = true;
     musicStep = 0;
     scheduleBar();
-    var barDur = (60 / musicBPM / 2) * 16 * 1000;
+    var barDur = (60 / musicBPM / 4) * 32 * 1000; // 2 bars worth
     musicInterval = setInterval(function() {
       if (musicPlaying) scheduleBar();
-    }, barDur - 50); // schedule slightly ahead
+    }, barDur - 80);
   }
 
   function stopMusic() {
     musicPlaying = false;
     if (musicInterval) { clearInterval(musicInterval); musicInterval = null; }
   }
+
+  // ===== SOUND EFFECTS ENGINE =====
+  var sfxCtx = null;
+
+  function initSfx() {
+    if (sfxCtx) return;
+    try {
+      sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {}
+  }
+
+  function ensureAudioReady() {
+    initSfx();
+    if (sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume();
+    if (musicCtx && musicCtx.state === 'suspended') musicCtx.resume();
+  }
+
+  // Enemy hit - quick zap
+  function playSfxHit() {
+    if (!sfxCtx) initSfx();
+    if (!sfxCtx) return;
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    var t = sfxCtx.currentTime;
+    var o = sfxCtx.createOscillator();
+    var g = sfxCtx.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(800, t);
+    o.frequency.exponentialRampToValueAtTime(200, t + 0.08);
+    g.gain.setValueAtTime(0.15, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    o.connect(g); g.connect(sfxCtx.destination);
+    o.start(t); o.stop(t + 0.1);
+  }
+
+  // Boss death - Khamenei crying/wailing descending tone
+  function playSfxBossDeath() {
+    if (!sfxCtx) initSfx();
+    if (!sfxCtx) return;
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    var t = sfxCtx.currentTime;
+    // Wailing cry - vibrato descending
+    for (var i = 0; i < 3; i++) {
+      var o = sfxCtx.createOscillator();
+      var g = sfxCtx.createGain();
+      var lfo = sfxCtx.createOscillator();
+      var lfoG = sfxCtx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(600 - i * 100, t + i * 0.4);
+      o.frequency.exponentialRampToValueAtTime(120, t + i * 0.4 + 0.35);
+      lfo.type = 'sine';
+      lfo.frequency.value = 12 + i * 4;
+      lfoG.gain.value = 40;
+      lfo.connect(lfoG); lfoG.connect(o.frequency);
+      g.gain.setValueAtTime(0.2, t + i * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.4 + 0.38);
+      o.connect(g); g.connect(sfxCtx.destination);
+      o.start(t + i * 0.4); o.stop(t + i * 0.4 + 0.4);
+      lfo.start(t + i * 0.4); lfo.stop(t + i * 0.4 + 0.4);
+    }
+    // Big boom at end
+    var n = sfxCtx.createOscillator();
+    var ng = sfxCtx.createGain();
+    n.type = 'sine';
+    n.frequency.setValueAtTime(80, t + 1.2);
+    n.frequency.exponentialRampToValueAtTime(20, t + 1.8);
+    ng.gain.setValueAtTime(0.3, t + 1.2);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+    n.connect(ng); ng.connect(sfxCtx.destination);
+    n.start(t + 1.2); n.stop(t + 1.8);
+  }
+
+  // Wave start fanfare - triumphant ascending notes
+  function playSfxWaveStart() {
+    if (!sfxCtx) initSfx();
+    if (!sfxCtx) return;
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    var t = sfxCtx.currentTime;
+    var notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+    for (var i = 0; i < notes.length; i++) {
+      var o = sfxCtx.createOscillator();
+      var g = sfxCtx.createGain();
+      o.type = 'square';
+      o.frequency.value = notes[i];
+      var start = t + i * 0.12;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.15, start + 0.02);
+      g.gain.setValueAtTime(0.15, start + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, start + (i === 3 ? 0.5 : 0.15));
+      o.connect(g); g.connect(sfxCtx.destination);
+      o.start(start); o.stop(start + (i === 3 ? 0.5 : 0.15));
+    }
+  }
+
+  // Countdown beep - descending pitch: 3=high, 2=mid, 1=low, GO=fanfare
+  function playSfxBeep(num) {
+    if (!sfxCtx) initSfx();
+    if (!sfxCtx) return;
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    var t = sfxCtx.currentTime;
+    if (num > 0) {
+      // Beep tone - higher for higher numbers
+      var freq = num === 3 ? 880 : (num === 2 ? 660 : 440);
+      var o = sfxCtx.createOscillator();
+      var g = sfxCtx.createGain();
+      o.type = 'square';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.setValueAtTime(0.2, t + 0.15);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      o.connect(g); g.connect(sfxCtx.destination);
+      o.start(t); o.stop(t + 0.4);
+    } else {
+      // GO! - quick ascending fanfare
+      var goNotes = [523, 784, 1047];
+      for (var i = 0; i < goNotes.length; i++) {
+        var o2 = sfxCtx.createOscillator();
+        var g2 = sfxCtx.createGain();
+        o2.type = 'square';
+        o2.frequency.value = goNotes[i];
+        var s = t + i * 0.06;
+        g2.gain.setValueAtTime(0.18, s);
+        g2.gain.exponentialRampToValueAtTime(0.001, s + 0.3);
+        o2.connect(g2); g2.connect(sfxCtx.destination);
+        o2.start(s); o2.stop(s + 0.3);
+      }
+    }
+  }
+
+  // Enemy kill explosion sound
+  function playSfxKill() {
+    if (!sfxCtx) initSfx();
+    if (!sfxCtx) return;
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    var t = sfxCtx.currentTime;
+    // Quick noise burst + sine drop
+    var o = sfxCtx.createOscillator();
+    var g = sfxCtx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(400, t);
+    o.frequency.exponentialRampToValueAtTime(60, t + 0.15);
+    g.gain.setValueAtTime(0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(g); g.connect(sfxCtx.destination);
+    o.start(t); o.stop(t + 0.15);
+  }
+
+  // Unlock audio on first user interaction (critical for mobile!)
+  document.addEventListener('touchstart', ensureAudioReady, { once: true, passive: true });
+  document.addEventListener('click', ensureAudioReady, { once: true });
 
   function startGame() {
     document.getElementById('startScreen').classList.add('hidden');
@@ -1931,6 +2302,18 @@
       drawStealthIndicator();
       drawPowerUpIndicator();
 
+      // "PRESS S" flashing prompt on desktop when F-35 ready
+      if (stealthReady && !isMobile) {
+        ctx.save();
+        var pulse = 0.5 + Math.sin(performance.now() / 200) * 0.5;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ff3300';
+        ctx.font = '900 28px ' + FONT_TITLE;
+        ctx.textAlign = 'center';
+        ctx.fillText('🇺🇸 PRESS S - F-35 STEALTH BOMBER! 🇺🇸', W/2, H * 0.18);
+        ctx.restore();
+      }
+
       if (comboCount > 1 && comboTimer > 0) {
         ctx.save();
         ctx.globalAlpha = Math.min(1, comboTimer);
@@ -1965,7 +2348,7 @@
         ctx.fillText('WAVE ' + wave, W/2, H/2 - 22);
         ctx.fillStyle = '#fbbf24';
         ctx.font = '700 22px ' + FONT_HEB;
-        ctx.fillText('!הכן כיפת ברזל', W/2, H/2 + 22);
+        ctx.fillText('!הכן שאגת הארי', W/2, H/2 + 22);
       }
       ctx.restore();
     }
