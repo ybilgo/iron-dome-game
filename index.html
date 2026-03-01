@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>כיפת ברזל - Iron Dome Defense</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a0a1a;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+    position: fixed;
+    top: 0; left: 0;
+  }
+
+  canvas {
+    display: block;
+    width: 100%; height: 100%;
+    position: fixed;
+    top: 0; left: 0;
+    touch-action: none;
+  }
+
+  /* OVERLAYS - no buttons, the whole screen is the trigger */
+  .overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: radial-gradient(ellipse at center, #0d1b3e 0%, #050a15 70%);
+    padding: 20px;
+    padding-top: env(safe-area-inset-top, 20px);
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  .overlay.hidden { display: none !important; }
+
+  .title {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, #60a5fa 50%, #fff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .hebrew-title {
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .motto {
+    color: #fbbf24;
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    font-weight: 700;
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+
+  .flag-icon {
+    width: 100px; height: 68px;
+    margin: 0.8rem auto;
+    position: relative;
+    border: 2px solid rgba(96,165,250,0.3);
+    overflow: hidden;
+  }
+  .flag-bg { background: #fff; width: 100%; height: 100%; }
+  .flag-stripe-top, .flag-stripe-bottom {
+    position: absolute; left: 0; right: 0; height: 14px; background: #0038b8;
+  }
+  .flag-stripe-top { top: 7px; }
+  .flag-stripe-bottom { bottom: 7px; }
+  .star-david-css {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 20px solid #0038b8;
+  }
+  .star-david-css::after {
+    content: ''; position: absolute;
+    top: 7px; left: -12px;
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 20px solid #0038b8;
+  }
+
+  .countdown-num {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(5rem, 25vw, 10rem);
+    font-weight: 900;
+    color: #60a5fa;
+    text-align: center;
+    text-shadow: 0 0 40px rgba(96,165,250,0.6);
+    animation: countPulse 0.9s ease-out;
+  }
+  .countdown-num.c2 { color: #fbbf24; text-shadow: 0 0 40px rgba(251,191,36,0.6); }
+  .countdown-num.c1 { color: #ef4444; text-shadow: 0 0 40px rgba(239,68,68,0.6); }
+  .countdown-num.go { color: #22c55e; text-shadow: 0 0 40px rgba(34,197,94,0.6); font-size: clamp(4rem, 20vw, 8rem); }
+
+  @keyframes countPulse {
+    0% { transform: scale(1.5); opacity: 0; }
+    30% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.8; }
+  }
+
+  .countdown-sub {
+    color: #8899bb;
+    font-size: clamp(0.9rem, 3vw, 1.1rem);
+    margin-top: 1rem;
+  }
+
+  .instructions {
+    color: #8899bb;
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: clamp(0.8rem, 2.5vw, 1rem);
+    line-height: 2;
+  }
+  .instructions span { color: #60a5fa; font-weight: 700; }
+
+  /* GAME OVER overlay - TAP ANYWHERE */
+  .gameover-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: rgba(5,10,21,0.88);
+    padding: 20px;
+    cursor: pointer;
+  }
+  .gameover-overlay.hidden { display: none !important; }
+
+  .score-display {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(1.8rem, 6vw, 2.5rem);
+    color: #60a5fa;
+    margin: 1rem 0;
+  }
+
+  .tap-hint {
+    color: #60a5fa;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(1rem, 3.5vw, 1.3rem);
+    font-weight: 700;
+    margin-top: 2rem;
+    animation: blinker 1.2s ease-in-out infinite;
+  }
+  @keyframes blinker {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  /* HUD */
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(46px + env(safe-area-inset-top, 0px));
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: max(15px, env(safe-area-inset-left, 0px));
+    padding-right: max(15px, env(safe-area-inset-right, 0px));
+    background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%);
+    z-index: 50;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(0.65rem, 2vw, 0.9rem);
+  }
+  .hud-item { color: #fff; display: flex; align-items: center; gap: 6px; }
+  .hud-value { color: #60a5fa; font-weight: 700; }
+  .hud-lives { display: flex; gap: 4px; font-size: 1rem; }
+
+  /* MOBILE CONTROLS */
+  #mobileControls {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 60;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 15px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 15px));
+    background: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+    touch-action: none;
+  }
+  .mobile-btn {
+    width: 72px; height: 72px;
+    border: 2px solid rgba(96,165,250,0.6);
+    background: rgba(96,165,250,0.15);
+    border-radius: 50%;
+    color: #fff; font-size: 1.8rem;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+  }
+  .mobile-btn.active, .mobile-btn:active {
+    background: rgba(96,165,250,0.45);
+    border-color: #60a5fa;
+    transform: scale(0.93);
+  }
+  .fire-btn {
+    width: 88px; height: 88px;
+    border-color: #ef4444;
+    background: rgba(239,68,68,0.18);
+    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+  }
+  .fire-btn.active, .fire-btn:active {
+    background: rgba(239,68,68,0.5);
+    border-color: #ff6b6b;
+    transform: scale(0.93);
+  }
+
+  @media (pointer: coarse), (max-width: 900px) {
+    #mobileControls { display: flex; }
+  }
+  @media (pointer: fine) and (min-width: 901px) {
+    #mobileControls { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TITLE SCREEN - auto hides after 2 seconds -->
+<div class="overlay" id="startScreen">
+  <div class="hebrew-title">🇮🇱 כיפת ברזל 🇮🇱</div>
+  <div class="title">IRON DOME</div>
+  <div class="subtitle">DEFENSE FORCE</div>
+  <div class="motto">עם ישראל חי! 💪</div>
+  <div class="flag-icon">
+    <div class="flag-bg"></div>
+    <div class="flag-stripe-top"></div>
+    <div class="flag-stripe-bottom"></div>
+    <div class="star-david-css"></div>
+  </div>
+  <div class="instructions">
+    <span id="instrText"></span>
+  </div>
+</div>
+
+<!-- COUNTDOWN SCREEN - shows 3, 2, 1, GO! -->
+<div class="overlay hidden" id="countdownScreen">
+  <div class="countdown-num" id="countdownNum">3</div>
+  <div class="countdown-sub">הכן כיפת ברזל...</div>
+</div>
+
+<!-- GAME OVER - tap ANYWHERE on this overlay to restart -->
+<div class="gameover-overlay hidden" id="gameOverScreen">
+  <div class="hebrew-title">המשימה הסתיימה</div>
+  <div class="title" style="font-size:clamp(1.8rem,6vw,2.5rem)">MISSION COMPLETE</div>
+  <div class="score-display" id="finalScore">0</div>
+  <div class="subtitle" id="finalWave" style="font-size:clamp(1rem,3vw,1.2rem)">גל 1</div>
+  <div class="motto" id="endMessage">עם ישראל חי!</div>
+  <div class="tap-hint" id="tapHint" style="display:none">TAP TO PLAY AGAIN<br><span style="font-family:Arial,sans-serif;font-size:0.85em">לחץ כדי לשחק שוב</span></div>
+</div>
+
+<div id="hud">
+  <div class="hud-item"><span>SCORE</span><span class="hud-value" id="hudScore">0</span></div>
+  <div class="hud-item"><span>WAVE</span><span class="hud-value" id="hudWave">1</span></div>
+  <div class="hud-item"><span>LIVES</span><div class="hud-lives" id="hudLives"></div></div>
+</div>
+
+<div id="mobileControls">
+  <button class="mobile-btn" id="btnLeft" type="button">◀</button>
+  <button class="mobile-btn fire-btn" id="btnFire" type="button">FIRE</button>
+  <button class="mobile-btn" id="btnRight" type="button">▶</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+(function() {
+  "use strict";
+
+  // ===== CANVAS =====
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var W = 0, H = 0;
+  var dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(resize, 100);
+    setTimeout(resize, 300);
+  });
+
+  // Only prevent touch defaults on canvas and controls
+  canvas.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+  var mcEl = document.getElementById('mobileControls');
+  if (mcEl) mcEl.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+
+  // ===== CONSTANTS =====
+  var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3;
+  var PW = 56, PH = 42, PSPEED = 4.5;
+  var SHOT_CD = 200;
+  var FONT_TITLE = "'Courier New', monospace";
+  var FONT_HEB = "Arial, sans-serif";
+
+  // ===== STATE =====
+  var gameState = MENU;
+  var score = 0, lives = 3, wave = 1;
+  var waveTimer = 0;
+  var shakeX = 0, shakeY = 0, shakeDur = 0;
+  var comboCount = 0, comboTimer = 0;
+
+  var pBullets = [];
+  var enemies = [];
+  var eBullets = [];
+  var particles = [];
+  var floats = [];
+
+  var px = 0, py = 0;
+  var pInvincible = 0;
+  var lastShot = 0;
+
+  var eDirX = 1, eSpeed = 0.6;
+
+  var keys = {};
+  var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+  // Set instruction text
+  document.getElementById('instrText').textContent = isMobile
+    ? 'השתמש בכפתורים למטה לשליטה 🛡️'
+    : '← → לתזוזה  |  SPACE לירי כיפת ברזל';
+
+  // BG stars
+  var bgStars = [];
+  for (var i = 0; i < 80; i++) {
+    bgStars.push({ x: Math.random(), y: Math.random(), sz: Math.random() * 1.5 + 0.5, ph: Math.random() * 6.28, sp: 0.5 + Math.random() * 2 });
+  }
+
+  // Buildings
+  var bldgs = [];
+  for (var bx = 0; bx < 2000; bx += 30 + Math.random() * 20) {
+    bldgs.push({ x: bx, w: 20 + Math.random() * 18, h: 20 + Math.random() * 35 });
+  }
+
+  // ===== AUTO-START SEQUENCE =====
+  // Step 1: Show title for 2.5 seconds
+  // Step 2: Show countdown 3...2...1...GO!
+  // Step 3: Start game
+  // ALL done with setTimeout - NO user interaction needed
+
+  setTimeout(function() {
+    // Hide title, show countdown
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('countdownScreen').classList.remove('hidden');
+
+    var numEl = document.getElementById('countdownNum');
+    numEl.textContent = '3';
+    numEl.className = 'countdown-num';
+
+    // "2" after 0.9s
+    setTimeout(function() {
+      numEl.textContent = '2';
+      numEl.className = 'countdown-num c2';
+      // Force re-animation
+      numEl.style.animation = 'none';
+      numEl.offsetHeight;
+      numEl.style.animation = '';
+
+      // "1" after 0.9s
+      setTimeout(function() {
+        numEl.textContent = '1';
+        numEl.className = 'countdown-num c1';
+        numEl.style.animation = 'none';
+        numEl.offsetHeight;
+        numEl.style.animation = '';
+
+        // "GO!" after 0.9s
+        setTimeout(function() {
+          numEl.textContent = '!GO';
+          numEl.className = 'countdown-num go';
+          numEl.style.animation = 'none';
+          numEl.offsetHeight;
+          numEl.style.animation = '';
+
+          // Hide countdown & start game after 0.6s
+          setTimeout(function() {
+            document.getElementById('countdownScreen').classList.add('hidden');
+            startGame();
+          }, 600);
+
+        }, 900);
+      }, 900);
+    }, 900);
+
+  }, 2500);
+
+  // ===== GAME OVER - TAP ANYWHERE ON THE OVERLAY =====
+  var gameOverScreen = document.getElementById('gameOverScreen');
+  var gameOverReady = false;
+
+  // Listen on the overlay div itself - this WORKS because HTML divs respond to taps in WebView
+  gameOverScreen.addEventListener('touchstart', function() {
+    if (gameOverReady) {
+      gameOverReady = false;
+      restartWithCountdown();
+    }
+  }, { passive: true });
+
+  gameOverScreen.addEventListener('click', function() {
+    if (gameOverReady) {
+      gameOverReady = false;
+      restartWithCountdown();
+    }
+  });
+
+  function restartWithCountdown() {
+    gameOverScreen.classList.add('hidden');
+    document.getElementById('countdownScreen').classList.remove('hidden');
+
+    var numEl = document.getElementById('countdownNum');
+    numEl.textContent = '3';
+    numEl.className = 'countdown-num';
+    numEl.style.animation = 'none';
+    numEl.offsetHeight;
+    numEl.style.animation = '';
+
+    setTimeout(function() {
+      numEl.textContent = '2';
+      numEl.className = 'countdown-num c2';
+      numEl.style.animation = 'none';
+      numEl.offsetHeight;
+      numEl.style.animation = '';
+
+      setTimeout(function() {
+        numEl.textContent = '1';
+        numEl.className = 'countdown-num c1';
+        numEl.style.animation = 'none';
+        numEl.offsetHeight;
+        numEl.style.animation = '';
+
+        setTimeout(function() {
+          numEl.textContent = '!GO';
+          numEl.className = 'countdown-num go';
+          numEl.style.animation = 'none';
+          numEl.offsetHeight;
+          numEl.style.animation = '';
+
+          setTimeout(function() {
+            document.getElementById('countdownScreen').classList.add('hidden');
+            startGame();
+          }, 600);
+
+        }, 900);
+      }, 900);
+    }, 900);
+  }
+
+  // ===== SPAWN WAVE =====
+  function spawnWave() {
+    enemies = [];
+    var rows = Math.min(2 + Math.floor(wave * 0.6), 5);
+    var cols = Math.min(4 + wave, 10);
+    var spX = Math.min(55, (W - 60) / cols);
+    var totW = (cols - 1) * spX;
+    var sx = (W - totW) / 2;
+    var sy = 65;
+
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        enemies.push({
+          x: sx + c * spX,
+          y: sy + r * 46,
+          size: 18,
+          hp: r === 0 ? 2 : 1,
+          maxHp: r === 0 ? 2 : 1,
+          flash: 0,
+          shootCD: 2000 + Math.random() * 4000
+        });
+      }
+    }
+    eDirX = 1;
+    eSpeed = 0.4 + wave * 0.1;
+    eBullets = [];
+  }
+
+  // ===== PARTICLES =====
+  function addP(x, y, col, n, spd) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * 6.28;
+      var v = (Math.random() * 0.6 + 0.4) * spd;
+      particles.push({ x: x, y: y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, life: 1, dec: 0.013 + Math.random() * 0.02, sz: 1.5 + Math.random() * 3, col: col });
+    }
+  }
+
+  function boom(x, y) {
+    addP(x, y, '#ff8844', 14, 4);
+    addP(x, y, '#ffcc44', 8, 3);
+    addP(x, y, '#ff3333', 6, 5);
+    addP(x, y, '#ffffff', 4, 2);
+    shakeDur = 10;
+  }
+
+  function interceptFX(x, y) {
+    addP(x, y, '#60a5fa', 8, 3);
+    addP(x, y, '#ffffff', 5, 2);
+  }
+
+  function addFloat(x, y, txt, col) {
+    floats.push({ x: x, y: y, txt: txt, col: col, life: 1 });
+  }
+
+  // ===== DRAW FUNCTIONS =====
+  function drawBG() {
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#030810');
+    grad.addColorStop(0.7, '#0a1628');
+    grad.addColorStop(1, '#0d1b35');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    var now = performance.now() / 1000;
+    for (var i = 0; i < bgStars.length; i++) {
+      var s = bgStars[i];
+      ctx.globalAlpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(now * s.sp + s.ph));
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(s.x * W, s.y * H * 0.75, s.sz, 0, 6.28);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = '#080f20';
+    ctx.fillRect(0, H - 35, W, 35);
+    for (var i = 0; i < bldgs.length; i++) {
+      var b = bldgs[i];
+      if (b.x > W + 30) continue;
+      ctx.fillStyle = '#0b1530';
+      ctx.fillRect(b.x, H - 35 - b.h, b.w, b.h);
+    }
+  }
+
+  function drawStar6(cx, cy, sz) {
+    ctx.fillStyle = '#0038b8';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - sz);
+    ctx.lineTo(cx + sz * 0.866, cy + sz * 0.5);
+    ctx.lineTo(cx - sz * 0.866, cy + sz * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + sz);
+    ctx.lineTo(cx + sz * 0.866, cy - sz * 0.5);
+    ctx.lineTo(cx - sz * 0.866, cy - sz * 0.5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawPlayer() {
+    ctx.save();
+    if (pInvincible > 0 && Math.floor(performance.now() / 80) % 2 === 0) {
+      ctx.globalAlpha = 0.3;
+    }
+
+    var x = px - PW / 2, y = py - PH / 2;
+
+    ctx.shadowColor = '#60a5fa';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, y, PW, PH);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#0038b8';
+    ctx.fillRect(x, y + 4, PW, 7);
+    ctx.fillRect(x, y + PH - 11, PW, 7);
+
+    drawStar6(px, py + 1, 7);
+
+    ctx.fillStyle = '#0038b8';
+    ctx.font = 'bold 7px ' + FONT_TITLE;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('IDF', px, py - 11);
+
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(px - 2, y - 9, 4, 11);
+    ctx.fillStyle = '#93c5fd';
+    ctx.fillRect(px - 4, y - 11, 8, 3);
+
+    var gs = 3 + Math.sin(performance.now() / 80) * 1.5;
+    var eg = ctx.createRadialGradient(px, y + PH, 0, px, y + PH, gs * 3);
+    eg.addColorStop(0, 'rgba(96,165,250,0.6)');
+    eg.addColorStop(1, 'rgba(96,165,250,0)');
+    ctx.fillStyle = eg;
+    ctx.beginPath();
+    ctx.arc(px, y + PH, gs * 3, 0, 6.28);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawPBullet(b) {
+    ctx.save();
+    var tg = ctx.createLinearGradient(b.x, b.y, b.x, b.y + 22);
+    tg.addColorStop(0, 'rgba(96,165,250,0.8)');
+    tg.addColorStop(1, 'rgba(96,165,250,0)');
+    ctx.fillStyle = tg;
+    ctx.fillRect(b.x - 2, b.y, 4, 22);
+    ctx.fillStyle = '#dbeafe';
+    ctx.fillRect(b.x - 2, b.y - 4, 4, 8);
+    ctx.fillStyle = '#60a5fa';
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y - 8);
+    ctx.lineTo(b.x + 3, b.y - 2);
+    ctx.lineTo(b.x - 3, b.y - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowColor = '#60a5fa';
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(b.x - 1, b.y - 6, 2, 6);
+    ctx.restore();
+  }
+
+  function drawEnemy(e) {
+    ctx.save();
+    var x = e.x, y = e.y, s = e.size;
+
+    if (e.flash > 0) ctx.globalAlpha = 0.4 + Math.sin(performance.now() / 40) * 0.3;
+
+    ctx.fillStyle = '#4a5a3a';
+    ctx.beginPath();
+    ctx.ellipse(x, y, s * 0.26, s * 0.65, 0, 0, 6.28);
+    ctx.fill();
+
+    ctx.fillStyle = '#cc2222';
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.8);
+    ctx.lineTo(x + s * 0.2, y + s * 0.35);
+    ctx.lineTo(x - s * 0.2, y + s * 0.35);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#6b7a5a';
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.26, y - s * 0.4);
+    ctx.lineTo(x - s * 0.5, y - s * 0.7);
+    ctx.lineTo(x - s * 0.1, y - s * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + s * 0.26, y - s * 0.4);
+    ctx.lineTo(x + s * 0.5, y - s * 0.7);
+    ctx.lineTo(x + s * 0.1, y - s * 0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    var sw = s * 0.34, sh = s * 0.09;
+    ctx.fillStyle = '#239f40';
+    ctx.fillRect(x - sw/2, y - sh*1.7, sw, sh);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - sw/2, y - sh*0.5, sw, sh);
+    ctx.fillStyle = '#da0000';
+    ctx.fillRect(x - sw/2, y + sh*0.7, sw, sh);
+
+    if (Math.random() > 0.35) {
+      var fs = s * 0.2 + Math.random() * s * 0.18;
+      var fg = ctx.createRadialGradient(x, y - s*0.65, 0, x, y - s*0.65, fs);
+      fg.addColorStop(0, 'rgba(255,220,80,0.7)');
+      fg.addColorStop(0.5, 'rgba(255,120,20,0.25)');
+      fg.addColorStop(1, 'rgba(255,50,0,0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(x, y - s*0.65, fs, 0, 6.28);
+      ctx.fill();
+    }
+
+    if (e.maxHp > 1 && e.hp > 1) {
+      ctx.fillStyle = 'rgba(255,80,80,0.6)';
+      ctx.beginPath();
+      ctx.arc(x, y - s*0.85, 2.5, 0, 6.28);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function drawEBullet(b) {
+    ctx.save();
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = 5;
+    ctx.fillStyle = '#ff6b6b';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 2.5, 0, 6.28);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 1, 0, 6.28);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      ctx.save();
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.col;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.sz * p.life, 0, 6.28);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawFloats() {
+    for (var i = 0; i < floats.length; i++) {
+      var t = floats[i];
+      ctx.save();
+      ctx.globalAlpha = t.life;
+      ctx.fillStyle = t.col;
+      ctx.font = 'bold 14px ' + FONT_TITLE;
+      ctx.textAlign = 'center';
+      ctx.fillText(t.txt, t.x, t.y);
+      ctx.restore();
+    }
+  }
+
+  // ===== UPDATE =====
+  function update(dt) {
+    if (shakeDur > 0) {
+      shakeDur--;
+      shakeX = (Math.random() - 0.5) * 5;
+      shakeY = (Math.random() - 0.5) * 5;
+    } else { shakeX = 0; shakeY = 0; }
+
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.05;
+      p.life -= p.dec;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    for (var i = floats.length - 1; i >= 0; i--) {
+      floats[i].y -= 1;
+      floats[i].life -= 0.014;
+      if (floats[i].life <= 0) floats.splice(i, 1);
+    }
+
+    if (gameState === WAVE_INTRO) {
+      waveTimer -= dt;
+      if (waveTimer <= 0) {
+        gameState = PLAYING;
+        spawnWave();
+      }
+      return;
+    }
+
+    if (gameState !== PLAYING) return;
+
+    if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) comboCount = 0; }
+    if (pInvincible > 0) pInvincible -= dt;
+
+    var dx = 0;
+    if (keys['ArrowLeft'] || keys['KeyA'] || keys['mLeft']) dx = -1;
+    if (keys['ArrowRight'] || keys['KeyD'] || keys['mRight']) dx = 1;
+    px += dx * PSPEED;
+    px = Math.max(PW/2 + 5, Math.min(W - PW/2 - 5, px));
+
+    var now = performance.now();
+    if ((keys['Space'] || keys['mFire']) && now - lastShot > SHOT_CD) {
+      pBullets.push({ x: px, y: py - PH/2 - 12 });
+      lastShot = now;
+    }
+
+    for (var i = pBullets.length - 1; i >= 0; i--) {
+      pBullets[i].y -= 7;
+      if (pBullets[i].y < -20) pBullets.splice(i, 1);
+    }
+
+    var hitEdge = false;
+    for (var i = 0; i < enemies.length; i++) {
+      enemies[i].x += eDirX * eSpeed;
+      if (enemies[i].x < 22 || enemies[i].x > W - 22) hitEdge = true;
+      if (enemies[i].flash > 0) enemies[i].flash -= dt;
+    }
+    if (hitEdge) {
+      eDirX *= -1;
+      for (var i = 0; i < enemies.length; i++) enemies[i].y += 10;
+    }
+
+    for (var i = 0; i < enemies.length; i++) {
+      var e = enemies[i];
+      e.shootCD -= dt * 1000;
+      if (e.shootCD <= 0) {
+        e.shootCD = Math.max(900, 2800 - wave * 150) + Math.random() * 2500;
+        if (Math.random() < 0.2 + wave * 0.035) {
+          eBullets.push({ x: e.x, y: e.y + e.size, vy: 2.2 + wave * 0.2 });
+        }
+      }
+    }
+
+    for (var i = eBullets.length - 1; i >= 0; i--) {
+      eBullets[i].y += eBullets[i].vy;
+      if (eBullets[i].y > H + 20) eBullets.splice(i, 1);
+    }
+
+    for (var bi = pBullets.length - 1; bi >= 0; bi--) {
+      var b = pBullets[bi];
+      var hitEnemy = false;
+      for (var ei = enemies.length - 1; ei >= 0; ei--) {
+        var e = enemies[ei];
+        var dx2 = b.x - e.x, dy2 = b.y - e.y;
+        if (dx2*dx2 + dy2*dy2 < (e.size+5)*(e.size+5)) {
+          hitEnemy = true;
+          e.hp--;
+          e.flash = 0.15;
+          if (e.hp <= 0) {
+            comboCount++;
+            comboTimer = 2.5;
+            var pts = 10 * comboCount;
+            score += pts;
+            boom(e.x, e.y);
+            addFloat(e.x, e.y - 12, '+' + pts, comboCount > 3 ? '#fbbf24' : '#60a5fa');
+            enemies.splice(ei, 1);
+          } else {
+            interceptFX(b.x, b.y);
+          }
+          break;
+        }
+      }
+      if (hitEnemy) pBullets.splice(bi, 1);
+    }
+
+    if (pInvincible <= 0) {
+      for (var i = eBullets.length - 1; i >= 0; i--) {
+        var b = eBullets[i];
+        if (Math.abs(b.x - px) < PW/2 + 3 && Math.abs(b.y - py) < PH/2 + 3) {
+          eBullets.splice(i, 1);
+          hitPlayer();
+          break;
+        }
+      }
+    }
+
+    for (var i = enemies.length - 1; i >= 0; i--) {
+      if (enemies[i].y > H - 75) {
+        boom(enemies[i].x, enemies[i].y);
+        enemies.splice(i, 1);
+        hitPlayer();
+      }
+    }
+
+    if (enemies.length === 0 && gameState === PLAYING) {
+      wave++;
+      score += wave * 50;
+      updateHUD();
+      gameState = WAVE_INTRO;
+      waveTimer = 2.0;
+    }
+
+    updateHUD();
+  }
+
+  function hitPlayer() {
+    lives--;
+    pInvincible = 2;
+    shakeDur = 15;
+    addP(px, py, '#ff4444', 12, 3);
+    if (lives <= 0) doGameOver();
+  }
+
+  function doGameOver() {
+    gameState = GAMEOVER;
+    document.getElementById('hud').style.display = 'none';
+    if (isMobile) document.getElementById('mobileControls').style.display = 'none';
+
+    var el = document.getElementById('gameOverScreen');
+    el.classList.remove('hidden');
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalWave').textContent = 'הגעת לגל ' + wave;
+
+    var msgs = ['עם ישראל חי! 🇮🇱','כיפת הברזל מגינה עלינו! 🛡️','ביחד ננצח! 💪','Am Yisrael Chai! 🇮🇱','ישראל חזקה! 💙'];
+    document.getElementById('endMessage').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+
+    // Show "tap to restart" after 2 seconds
+    document.getElementById('tapHint').style.display = 'none';
+    gameOverReady = false;
+    setTimeout(function() {
+      document.getElementById('tapHint').style.display = 'block';
+      gameOverReady = true;
+    }, 2000);
+  }
+
+  function updateHUD() {
+    document.getElementById('hudScore').textContent = score;
+    document.getElementById('hudWave').textContent = wave;
+    var el = document.getElementById('hudLives');
+    var html = '';
+    for (var i = 0; i < 3; i++) html += '<span>' + (i < lives ? '❤️' : '🖤') + '</span>';
+    el.innerHTML = html;
+  }
+
+  // ===== GAME START =====
+  function startGame() {
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('countdownScreen').classList.add('hidden');
+    document.getElementById('hud').style.display = 'flex';
+    if (isMobile) document.getElementById('mobileControls').style.display = 'flex';
+
+    score = 0; lives = 3; wave = 1;
+    pBullets = []; enemies = []; eBullets = [];
+    particles = []; floats = [];
+    comboCount = 0; comboTimer = 0;
+
+    px = W / 2;
+    py = H - (isMobile ? 155 : 80);
+    pInvincible = 0;
+
+    updateHUD();
+    gameState = WAVE_INTRO;
+    waveTimer = 2.0;
+  }
+
+  // ===== MAIN RENDER LOOP =====
+  var prevTime = 0;
+
+  function frame(ts) {
+    var dt = Math.min((ts - prevTime) / 1000, 0.05);
+    prevTime = ts;
+
+    update(dt);
+
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+    drawBG();
+
+    if (gameState === PLAYING || gameState === WAVE_INTRO) {
+      for (var i = 0; i < enemies.length; i++) drawEnemy(enemies[i]);
+      for (var i = 0; i < eBullets.length; i++) drawEBullet(eBullets[i]);
+      for (var i = 0; i < pBullets.length; i++) drawPBullet(pBullets[i]);
+      drawPlayer();
+
+      if (comboCount > 1 && comboTimer > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, comboTimer);
+        ctx.fillStyle = comboCount > 4 ? '#fbbf24' : '#60a5fa';
+        var fs = Math.min(36, 20 + comboCount * 3);
+        ctx.font = '900 ' + fs + 'px ' + FONT_TITLE;
+        ctx.textAlign = 'center';
+        ctx.fillText('COMBO x' + comboCount + '!', W/2, H - 155);
+        ctx.restore();
+      }
+    }
+
+    if (gameState === WAVE_INTRO) {
+      var a = waveTimer < 0.5 ? waveTimer*2 : (waveTimer > 1.5 ? (2-waveTimer)*2 : 1);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, a));
+      ctx.fillStyle = '#60a5fa';
+      ctx.font = '900 42px ' + FONT_TITLE;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('WAVE ' + wave, W/2, H/2 - 22);
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '700 22px ' + FONT_HEB;
+      ctx.fillText('!הכן כיפת ברזל', W/2, H/2 + 22);
+      ctx.restore();
+    }
+
+    drawParticles();
+    drawFloats();
+    ctx.restore();
+
+    requestAnimationFrame(frame);
+  }
+
+  // ===== INPUT HANDLING =====
+  document.addEventListener('keydown', function(e) {
+    keys[e.code] = true;
+    if (e.code === 'Space') e.preventDefault();
+    if (gameState === GAMEOVER && gameOverReady && (e.code === 'Space' || e.code === 'Enter')) {
+      gameOverReady = false;
+      restartWithCountdown();
+    }
+  });
+  document.addEventListener('keyup', function(e) { keys[e.code] = false; });
+
+  // Mobile game controls
+  function bindTouch(id, key) {
+    var el = document.getElementById(id);
+    if (!el) return;
+
+    function activate(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      keys[key] = true;
+      el.classList.add('active');
+    }
+    function deactivate(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      keys[key] = false;
+      el.classList.remove('active');
+    }
+
+    el.addEventListener('touchstart', activate, { passive: false });
+    el.addEventListener('touchend', deactivate, { passive: false });
+    el.addEventListener('touchcancel', deactivate, { passive: false });
+
+    el.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      var touch = e.touches[0];
+      var rect = el.getBoundingClientRect();
+      if (touch.clientX < rect.left - 15 || touch.clientX > rect.right + 15 ||
+          touch.clientY < rect.top - 15 || touch.clientY > rect.bottom + 15) {
+        keys[key] = false;
+        el.classList.remove('active');
+      }
+    }, { passive: false });
+
+    el.addEventListener('mousedown', function(e) { e.preventDefault(); keys[key] = true; el.classList.add('active'); });
+    el.addEventListener('mouseup', function(e) { e.preventDefault(); keys[key] = false; el.classList.remove('active'); });
+    el.addEventListener('mouseleave', function(e) { keys[key] = false; el.classList.remove('active'); });
+  }
+
+  bindTouch('btnLeft', 'mLeft');
+  bindTouch('btnRight', 'mRight');
+  bindTouch('btnFire', 'mFire');
+
+  // Prevent double-tap zoom only during gameplay
+  document.addEventListener('touchend', function(e) {
+    if (gameState === PLAYING || gameState === WAVE_INTRO) {
+      var now = Date.now();
+      if (now - (document._lastTap || 0) < 300) e.preventDefault();
+      document._lastTap = now;
+    }
+  }, { passive: false });
+
+  // ===== KICK OFF =====
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
