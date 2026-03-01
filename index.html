@@ -232,18 +232,18 @@
       ".    up   ."
       "left .    right"
       ".    down .";
-    grid-template-columns: 52px 52px 52px;
-    grid-template-rows: 52px 52px 52px;
-    gap: 4px;
+    grid-template-columns: 64px 64px 64px;
+    grid-template-rows: 64px 64px 64px;
+    gap: 5px;
     pointer-events: auto;
   }
 
   .mobile-btn {
-    width: 52px; height: 52px;
+    width: 64px; height: 64px;
     border: 2px solid rgba(96,165,250,0.6);
     background: rgba(96,165,250,0.15);
     border-radius: 50%;
-    color: #fff; font-size: 1.4rem;
+    color: #fff; font-size: 1.5rem;
     display: flex; align-items: center; justify-content: center;
     touch-action: none;
     user-select: none;
@@ -259,7 +259,7 @@
     transform: scale(0.93);
   }
   .fire-btn {
-    width: 80px; height: 80px;
+    width: 90px; height: 90px;
     border-color: #ef4444;
     background: rgba(239,68,68,0.18);
     font-size: 0.7rem;
@@ -388,7 +388,7 @@
     H = window.innerHeight;
     // On mobile, zoom out to show more game area
     if (isMobile) {
-      mobileScale = 0.88;
+      mobileScale = 0.62;
       W = Math.round(W / mobileScale);
       H = Math.round(H / mobileScale);
     }
@@ -411,7 +411,7 @@
 
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
-  var PW = 60, PH = 52, PSPEED = 4.5;
+  var PW = 60, PH = 52, PSPEED = isMobile ? 6 : 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
   var FONT_HEB = "Arial, sans-serif";
@@ -779,111 +779,122 @@
 
     // Shield glow when invincible
     if (shieldTimer > 0) {
-      var sg = ctx.createRadialGradient(px, py, 10, px, py, 38);
+      var sg = ctx.createRadialGradient(px, py, 10, px, py, 42);
       sg.addColorStop(0, 'rgba(68,221,255,0.0)');
-      sg.addColorStop(0.7, 'rgba(68,221,255,0.15)');
+      sg.addColorStop(0.6, 'rgba(68,221,255,0.2)');
       sg.addColorStop(1, 'rgba(68,221,255,0.0)');
       ctx.fillStyle = sg;
-      ctx.beginPath(); ctx.arc(px, py, 38, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 42, 0, 6.28); ctx.fill();
     }
 
-    // === LION BODY (facing up - shooting upward) ===
-    var s = 1.0; // scale
+    // === LION (Blue-White Israeli uniform) ===
+    var s = 1.0;
 
-    // Body - golden oval
-    ctx.fillStyle = '#d4a030';
+    // === Body - white with blue vest ===
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.ellipse(px, py + 4*s, 18*s, 22*s, 0, 0, 6.28);
     ctx.fill();
-    // Darker belly
-    ctx.fillStyle = '#c49028';
-    ctx.beginPath();
-    ctx.ellipse(px, py + 8*s, 12*s, 14*s, 0, 0, 6.28);
-    ctx.fill();
-
-    // === נילי on the back ===
+    // Blue vest/armor overlay
     ctx.fillStyle = '#0038b8';
-    ctx.font = 'bold ' + Math.round(10*s) + 'px ' + FONT_HEB;
+    ctx.beginPath();
+    ctx.ellipse(px, py + 2*s, 16*s, 18*s, 0, 0, 6.28);
+    ctx.fill();
+    // White stripe down center of vest
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px - 3*s, py - 14*s, 6*s, 28*s);
+    // Star of David on chest
+    drawStar6(px, py - 2*s, 6*s);
+
+    // === נילי on the back (below star) ===
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold ' + Math.round(9*s) + 'px ' + FONT_HEB;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('נילי', px, py + 6*s);
+    ctx.fillText('נילי', px, py + 12*s);
 
-    // Mane - golden/amber fluffy circle around head
+    // === Mane - blue and white tufts ===
     var maneY = py - 16*s;
-    var maneColors = ['#b8860b', '#d4a030', '#e8b830', '#d4a030'];
-    for (var mi = 0; mi < 12; mi++) {
-      var ma = (mi / 12) * 6.28 + Math.sin(performance.now()/300 + mi) * 0.1;
+    var mClrs = ['#0038b8', '#ffffff', '#0050d0', '#e0e8ff'];
+    for (var mi = 0; mi < 14; mi++) {
+      var ma = (mi / 14) * 6.28 + Math.sin(performance.now()/300 + mi) * 0.12;
       var mr = 16*s + Math.sin(performance.now()/200 + mi*1.3) * 2;
-      ctx.fillStyle = maneColors[mi % 4];
+      ctx.fillStyle = mClrs[mi % 4];
       ctx.beginPath();
-      ctx.arc(px + Math.cos(ma)*mr, maneY + Math.sin(ma)*mr*0.85, 7*s, 0, 6.28);
+      ctx.arc(px + Math.cos(ma)*mr, maneY + Math.sin(ma)*mr*0.85, 6.5*s, 0, 6.28);
       ctx.fill();
     }
 
-    // Head
-    ctx.fillStyle = '#d4a030';
+    // Head - white fur
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(px, maneY, 13*s, 0, 6.28);
     ctx.fill();
 
+    // Blue headband/kippah
+    ctx.fillStyle = '#0038b8';
+    ctx.beginPath();
+    ctx.arc(px, maneY - 5*s, 10*s, Math.PI, 2*Math.PI);
+    ctx.fill();
+    // Tiny star on headband
+    drawStar6(px, maneY - 8*s, 3*s);
+
     // Ears
-    ctx.fillStyle = '#c49028';
+    ctx.fillStyle = '#e8e8f0';
     ctx.beginPath(); ctx.arc(px - 10*s, maneY - 10*s, 5*s, 0, 6.28); ctx.fill();
     ctx.beginPath(); ctx.arc(px + 10*s, maneY - 10*s, 5*s, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#e8b090';
+    ctx.fillStyle = '#c0c8e0';
     ctx.beginPath(); ctx.arc(px - 10*s, maneY - 10*s, 3*s, 0, 6.28); ctx.fill();
     ctx.beginPath(); ctx.arc(px + 10*s, maneY - 10*s, 3*s, 0, 6.28); ctx.fill();
 
-    // Eyes - fierce
+    // Eyes - fierce blue
     ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.ellipse(px - 5*s, maneY - 2*s, 4*s, 3*s, 0, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(px + 5*s, maneY - 2*s, 4*s, 3*s, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(px - 5*s, maneY - 2*s, 2*s, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 5*s, maneY - 2*s, 2*s, 0, 6.28); ctx.fill();
-    // Eye glint
+    ctx.beginPath(); ctx.ellipse(px - 5*s, maneY - 1*s, 4*s, 3.5*s, 0, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px + 5*s, maneY - 1*s, 4*s, 3.5*s, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#0038b8';
+    ctx.beginPath(); ctx.arc(px - 5*s, maneY - 1*s, 2*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 5*s, maneY - 1*s, 2*s, 0, 6.28); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(px - 4*s, maneY - 3*s, 0.8*s, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 6*s, maneY - 3*s, 0.8*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px - 4*s, maneY - 2*s, 0.8*s, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 6*s, maneY - 2*s, 0.8*s, 0, 6.28); ctx.fill();
 
     // Nose
-    ctx.fillStyle = '#8B4513';
+    ctx.fillStyle = '#4466aa';
     ctx.beginPath();
-    ctx.moveTo(px, maneY + 3*s);
-    ctx.lineTo(px - 3*s, maneY + 6*s);
-    ctx.lineTo(px + 3*s, maneY + 6*s);
+    ctx.moveTo(px, maneY + 4*s);
+    ctx.lineTo(px - 3*s, maneY + 7*s);
+    ctx.lineTo(px + 3*s, maneY + 7*s);
     ctx.closePath();
     ctx.fill();
 
     // === OPEN JAW (roaring upward!) ===
-    // Upper jaw/snout pointing UP
-    ctx.fillStyle = '#c49028';
+    ctx.fillStyle = '#e0e8ff';
     ctx.beginPath();
-    ctx.moveTo(px - 8*s, maneY - 10*s);
-    ctx.quadraticCurveTo(px, maneY - 22*s, px + 8*s, maneY - 10*s);
+    ctx.moveTo(px - 9*s, maneY - 10*s);
+    ctx.quadraticCurveTo(px, maneY - 24*s, px + 9*s, maneY - 10*s);
     ctx.closePath();
     ctx.fill();
-    // Inside mouth (dark)
-    ctx.fillStyle = '#8B0000';
+    // Inside mouth
+    ctx.fillStyle = '#cc0000';
     ctx.beginPath();
-    ctx.moveTo(px - 6*s, maneY - 10*s);
-    ctx.quadraticCurveTo(px, maneY - 19*s, px + 6*s, maneY - 10*s);
+    ctx.moveTo(px - 7*s, maneY - 10*s);
+    ctx.quadraticCurveTo(px, maneY - 21*s, px + 7*s, maneY - 10*s);
     ctx.closePath();
     ctx.fill();
-    // Teeth on upper jaw
+    // Teeth
     ctx.fillStyle = '#fff';
     for (var ti = -2; ti <= 2; ti++) {
       ctx.beginPath();
-      var tx = px + ti * 3*s;
-      ctx.moveTo(tx - 1.5*s, maneY - 11*s);
-      ctx.lineTo(tx, maneY - 14*s);
-      ctx.lineTo(tx + 1.5*s, maneY - 11*s);
+      var tx = px + ti * 3.2*s;
+      ctx.moveTo(tx - 1.8*s, maneY - 11*s);
+      ctx.lineTo(tx, maneY - 15*s);
+      ctx.lineTo(tx + 1.8*s, maneY - 11*s);
       ctx.closePath();
       ctx.fill();
     }
 
-    // Tail (curling from body)
-    ctx.strokeStyle = '#d4a030';
+    // Tail
+    ctx.strokeStyle = '#0038b8';
     ctx.lineWidth = 3*s;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -891,26 +902,26 @@
     ctx.moveTo(px, py + 24*s);
     ctx.quadraticCurveTo(px + 20*s + tailWag, py + 20*s, px + 15*s + tailWag, py + 10*s);
     ctx.stroke();
-    // Tail tuft
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath();
-    ctx.arc(px + 15*s + tailWag, py + 10*s, 4*s, 0, 6.28);
-    ctx.fill();
+    // Tail tuft - white with blue
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(px + 15*s + tailWag, py + 10*s, 5*s, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#0038b8';
+    ctx.beginPath(); ctx.arc(px + 15*s + tailWag, py + 10*s, 3*s, 0, 6.28); ctx.fill();
 
-    // Front paws
-    ctx.fillStyle = '#d4a030';
-    ctx.beginPath(); ctx.ellipse(px - 12*s, py + 22*s, 5*s, 4*s, -0.2, 0, 6.28); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(px + 12*s, py + 22*s, 5*s, 4*s, 0.2, 0, 6.28); ctx.fill();
+    // Front paws - white
+    ctx.fillStyle = '#e8e8f0';
+    ctx.beginPath(); ctx.ellipse(px - 13*s, py + 22*s, 5*s, 4*s, -0.2, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px + 13*s, py + 22*s, 5*s, 4*s, 0.2, 0, 6.28); ctx.fill();
 
-    // === Golden glow from mouth (like fire breath direction) ===
+    // === Blue-white glow from mouth ===
     var gs = 4 + Math.sin(performance.now() / 80) * 2;
-    var eg = ctx.createRadialGradient(px, maneY - 22*s, 0, px, maneY - 22*s, gs * 3);
-    eg.addColorStop(0, 'rgba(255,200,50,0.5)');
-    eg.addColorStop(0.5, 'rgba(255,150,0,0.2)');
-    eg.addColorStop(1, 'rgba(255,100,0,0)');
+    var eg = ctx.createRadialGradient(px, maneY - 24*s, 0, px, maneY - 24*s, gs * 3.5);
+    eg.addColorStop(0, 'rgba(0,56,184,0.5)');
+    eg.addColorStop(0.4, 'rgba(96,165,250,0.25)');
+    eg.addColorStop(1, 'rgba(96,165,250,0)');
     ctx.fillStyle = eg;
     ctx.beginPath();
-    ctx.arc(px, maneY - 22*s, gs * 3, 0, 6.28);
+    ctx.arc(px, maneY - 24*s, gs * 3.5, 0, 6.28);
     ctx.fill();
 
     // HP bar below player
@@ -2418,15 +2429,19 @@
       drawStealthIndicator();
       drawPowerUpIndicator();
 
-      // "PRESS S" flashing prompt on desktop when F-35 ready
-      if (stealthReady && !isMobile) {
+      // Flashing prompt when F-35 ready
+      if (stealthReady) {
         ctx.save();
         var pulse = 0.5 + Math.sin(performance.now() / 200) * 0.5;
         ctx.globalAlpha = pulse;
         ctx.fillStyle = '#ff3300';
-        ctx.font = '900 28px ' + FONT_TITLE;
+        ctx.font = '900 ' + (isMobile ? '22' : '28') + 'px ' + FONT_TITLE;
         ctx.textAlign = 'center';
-        ctx.fillText('🇺🇸 PRESS S - F-35 STEALTH BOMBER! 🇺🇸', W/2, H * 0.18);
+        if (isMobile) {
+          ctx.fillText('🇺🇸 BOMBER AVAILABLE! 🇺🇸', W/2, H * 0.15);
+        } else {
+          ctx.fillText('🇺🇸 PRESS S - F-35 STEALTH BOMBER! 🇺🇸', W/2, H * 0.18);
+        }
         ctx.restore();
       }
 
@@ -2521,8 +2536,8 @@
       if (key === 'stealth') return;
       var touch = e.touches[0];
       var rect = el.getBoundingClientRect();
-      if (touch.clientX < rect.left - 15 || touch.clientX > rect.right + 15 ||
-          touch.clientY < rect.top - 15 || touch.clientY > rect.bottom + 15) {
+      if (touch.clientX < rect.left - 30 || touch.clientX > rect.right + 30 ||
+          touch.clientY < rect.top - 30 || touch.clientY > rect.bottom + 30) {
         keys[key] = false;
         el.classList.remove('active');
       }
