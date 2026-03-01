@@ -205,6 +205,7 @@
     bottom: 0; left: 0; right: 0;
     z-index: 60;
     display: none;
+    direction: ltr; /* Force LTR: fire on LEFT, d-pad on RIGHT */
     justify-content: space-between;
     align-items: flex-end;
     padding: 10px 14px;
@@ -226,6 +227,7 @@
   /* Right side: D-pad */
   .controls-right {
     display: grid;
+    direction: ltr; /* Force LTR so grid isn't flipped by RTL page */
     grid-template-areas:
       ".    up   ."
       "left .    right"
@@ -271,24 +273,33 @@
     transform: scale(0.93);
   }
   .stealth-btn {
-    width: 58px; height: 58px;
-    border-color: #ff3333;
-    background: rgba(255,0,0,0.25);
-    font-size: 0.45rem;
+    width: 62px; height: 62px;
+    border-color: #555;
+    background: rgba(80,80,80,0.3);
+    font-size: 0.5rem;
     font-family: 'Courier New', monospace;
     font-weight: 700;
-    color: #ff6666;
+    color: #888;
+    transition: all 0.3s ease;
   }
   .stealth-btn.ready {
-    border-color: #ff0000;
-    background: rgba(255,0,0,0.4);
+    width: 72px; height: 72px;
+    border: 3px solid #ff0000;
+    background: rgba(255,0,0,0.35);
     color: #fff;
-    animation: blinker 0.8s ease-in-out infinite;
+    font-size: 0.65rem;
+    animation: f35pulse 0.6s ease-in-out infinite;
+    box-shadow: 0 0 15px rgba(255,0,0,0.6), 0 0 30px rgba(255,0,0,0.3), inset 0 0 10px rgba(255,0,0,0.2);
+  }
+  @keyframes f35pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(255,0,0,0.6), 0 0 30px rgba(255,0,0,0.3); border-color: #ff0000; }
+    50% { transform: scale(1.08); box-shadow: 0 0 25px rgba(255,50,0,0.9), 0 0 50px rgba(255,0,0,0.5); border-color: #ff4400; }
   }
   .stealth-btn.active, .stealth-btn:active {
-    background: rgba(255,0,0,0.6);
+    background: rgba(255,0,0,0.7);
     border-color: #ff0000;
-    transform: scale(0.93);
+    transform: scale(0.9);
+    box-shadow: 0 0 20px rgba(255,0,0,0.8);
   }
 
   #btnUp { grid-area: up; }
@@ -369,13 +380,22 @@
   var W = 0, H = 0;
   var dpr = window.devicePixelRatio || 1;
 
+  // Mobile zoom out: scale the game world to show more area
+  var mobileScale = 1;
+
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
+    // On mobile, zoom out to show more game area
+    if (isMobile) {
+      mobileScale = 0.88;
+      W = Math.round(W / mobileScale);
+      H = Math.round(H / mobileScale);
+    }
     canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
+    canvas.style.width = (W * mobileScale) + 'px';
+    canvas.style.height = (H * mobileScale) + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   resize();
@@ -436,6 +456,19 @@
   // Boss
   var boss = null;
   var bossIntroTimer = 0;
+
+  // === PRELOAD REAL PHOTOS ===
+  var khameneiImg = new Image();
+  khameneiImg.crossOrigin = 'anonymous';
+  khameneiImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Ali_Khamenei_2024_%283x4_cropped%29.jpg/200px-Ali_Khamenei_2024_%283x4_cropped%29.jpg';
+  var khameneiLoaded = false;
+  khameneiImg.onload = function() { khameneiLoaded = true; };
+
+  var trumpImg = new Image();
+  trumpImg.crossOrigin = 'anonymous';
+  trumpImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/January_2025_Official_Presidential_Portrait_of_Donald_J._Trump.jpg/200px-January_2025_Official_Presidential_Portrait_of_Donald_J._Trump.jpg';
+  var trumpLoaded = false;
+  trumpImg.onload = function() { trumpLoaded = true; };
 
   var keys = {};
   var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -546,15 +579,34 @@
   // ===== SPAWN BOSS =====
   function spawnBoss() {
     var bossNum = Math.floor(wave / 3);
-    var baseHP = 30;
-    var extraHP = (bossNum - 1) * 10;
     var col = bossColors[(bossNum - 1) % bossColors.length];
+
+    // Exponential scaling for waves 9+
+    var baseHP, extraHP, bossSize, label;
+    if (wave >= 12) {
+      // NIGHTMARE tier: massive HP, bigger, furious
+      baseHP = 80;
+      extraHP = (bossNum - 1) * 25;
+      bossSize = 65;
+      label = '💀 NIGHTMARE #' + bossNum + ' 💀';
+    } else if (wave >= 9) {
+      // RAGE tier: very tough
+      baseHP = 55;
+      extraHP = (bossNum - 1) * 18;
+      bossSize = 58;
+      label = '🔥 RAGE BOSS #' + bossNum + ' 🔥';
+    } else {
+      baseHP = 30;
+      extraHP = (bossNum - 1) * 10;
+      bossSize = 50;
+      label = 'BOSS #' + bossNum;
+    }
 
     boss = {
       x: W / 2,
       y: -80,
       targetY: 100,
-      size: 50,
+      size: bossSize,
       hp: baseHP + extraHP,
       maxHp: baseHP + extraHP,
       color: col,
@@ -566,7 +618,13 @@
       moveDir: 1,
       moveTimer: 0,
       bossNum: bossNum,
-      label: 'BOSS #' + bossNum
+      label: label,
+      // Advanced attack patterns for high waves
+      attackPattern: 0,
+      spiralAngle: 0,
+      rageMode: false,
+      chargeTimer: 0,
+      chargeDir: 0
     };
   }
 
@@ -595,10 +653,11 @@
     if (btn) {
       if (stealthReady) {
         btn.classList.add('ready');
-        btn.textContent = 'F-35!';
+        btn.innerHTML = '🇺🇸<br>F-35<br>GO!';
       } else {
         btn.classList.remove('ready');
-        btn.textContent = 'F-35 (' + killsSinceLastStealth + '/30)';
+        var pct = Math.floor((killsSinceLastStealth / 30) * 100);
+        btn.innerHTML = 'F-35<br>' + pct + '%';
       }
     }
   }
@@ -891,127 +950,53 @@
     ctx.ellipse(x, y - s * 0.15, s * 0.55, s * 0.6, 0, Math.PI + 0.3, -0.3);
     ctx.stroke();
 
-    // === CHARACTER: Khamenei ===
-    var headY = y - s * 0.35;
-    var headR = s * 0.22;
-
-    // Face (skin tone)
-    ctx.fillStyle = '#e8c8a0';
-    ctx.beginPath();
-    ctx.arc(x, headY, headR, 0, 6.28);
-    ctx.fill();
-
-    // === BLACK TURBAN ===
-    // Main turban wrap - round on top
-    ctx.fillStyle = '#111111';
-    ctx.beginPath();
-    ctx.ellipse(x, headY - headR * 0.55, headR * 1.1, headR * 0.7, 0, 0, 6.28);
-    ctx.fill();
-    // Turban top dome
-    ctx.beginPath();
-    ctx.ellipse(x, headY - headR * 0.9, headR * 0.85, headR * 0.45, 0, 0, 6.28);
-    ctx.fill();
-    // Turban front band across forehead
-    ctx.fillRect(x - headR * 0.95, headY - headR * 0.55, headR * 1.9, headR * 0.3);
-
-    // === GLASSES ===
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1.2;
-    // Left lens
-    ctx.beginPath();
-    ctx.ellipse(x - headR * 0.35, headY - headR * 0.05, headR * 0.22, headR * 0.18, 0, 0, 6.28);
-    ctx.stroke();
-    // Right lens
-    ctx.beginPath();
-    ctx.ellipse(x + headR * 0.35, headY - headR * 0.05, headR * 0.22, headR * 0.18, 0, 0, 6.28);
-    ctx.stroke();
-    // Bridge
-    ctx.beginPath();
-    ctx.moveTo(x - headR * 0.13, headY - headR * 0.05);
-    ctx.lineTo(x + headR * 0.13, headY - headR * 0.05);
-    ctx.stroke();
-    // Lens tint
-    ctx.fillStyle = 'rgba(100,100,100,0.15)';
-    ctx.beginPath();
-    ctx.ellipse(x - headR * 0.35, headY - headR * 0.05, headR * 0.2, headR * 0.16, 0, 0, 6.28);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(x + headR * 0.35, headY - headR * 0.05, headR * 0.2, headR * 0.16, 0, 0, 6.28);
-    ctx.fill();
-
-    // === EYES (behind glasses) ===
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath();
-    ctx.arc(x - headR * 0.35, headY - headR * 0.05, 1.5, 0, 6.28);
-    ctx.arc(x + headR * 0.35, headY - headR * 0.05, 1.5, 0, 6.28);
-    ctx.fill();
-
-    // === EYEBROWS (thick, grey) ===
-    ctx.strokeStyle = '#777';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x - headR * 0.55, headY - headR * 0.25);
-    ctx.quadraticCurveTo(x - headR * 0.35, headY - headR * 0.35, x - headR * 0.15, headY - headR * 0.25);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + headR * 0.15, headY - headR * 0.25);
-    ctx.quadraticCurveTo(x + headR * 0.35, headY - headR * 0.35, x + headR * 0.55, headY - headR * 0.25);
-    ctx.stroke();
-
-    // === NOSE ===
-    ctx.strokeStyle = '#c0a080';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x, headY - headR * 0.05);
-    ctx.lineTo(x - headR * 0.08, headY + headR * 0.2);
-    ctx.lineTo(x + headR * 0.05, headY + headR * 0.2);
-    ctx.stroke();
-
-    // === LONG WHITE BEARD ===
-    // Main beard shape - full and long
-    ctx.fillStyle = '#e8e8e8';
-    ctx.beginPath();
-    ctx.moveTo(x - headR * 0.7, headY + headR * 0.2);
-    // Left side
-    ctx.quadraticCurveTo(x - headR * 0.9, headY + headR * 1.0, x - headR * 0.5, headY + headR * 2.2);
-    // Bottom curve
-    ctx.quadraticCurveTo(x, headY + headR * 2.8, x + headR * 0.5, headY + headR * 2.2);
-    // Right side
-    ctx.quadraticCurveTo(x + headR * 0.9, headY + headR * 1.0, x + headR * 0.7, headY + headR * 0.2);
-    ctx.closePath();
-    ctx.fill();
-
-    // Beard texture lines
-    ctx.strokeStyle = 'rgba(200,200,200,0.5)';
-    ctx.lineWidth = 0.5;
-    for (var bi = -3; bi <= 3; bi++) {
+    // === CHARACTER: Khamenei (real photo) ===
+    if (khameneiLoaded) {
+      // Draw real photo inside the dome, clipped to circular shape
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(x + bi * headR * 0.15, headY + headR * 0.4);
-      ctx.quadraticCurveTo(x + bi * headR * 0.18, headY + headR * 1.5, x + bi * headR * 0.12, headY + headR * 2.3);
-      ctx.stroke();
+      ctx.arc(x, y - s * 0.2, s * 0.48, 0, 6.28);
+      ctx.clip();
+      var imgSize = s * 1.0;
+      ctx.drawImage(khameneiImg, x - imgSize * 0.5, y - s * 0.2 - imgSize * 0.6, imgSize, imgSize * 1.25);
+      ctx.restore();
+    } else {
+      // Fallback: simple face if image not loaded
+      var headY = y - s * 0.35;
+      var headR = s * 0.22;
+      ctx.fillStyle = '#e8c8a0';
+      ctx.beginPath(); ctx.arc(x, headY, headR, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.ellipse(x, headY - headR*0.55, headR*1.1, headR*0.7, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#e8e8e8';
+      ctx.beginPath();
+      ctx.moveTo(x - headR*0.7, headY + headR*0.2);
+      ctx.quadraticCurveTo(x - headR*0.9, headY + headR, x - headR*0.5, headY + headR*2.2);
+      ctx.quadraticCurveTo(x, headY + headR*2.8, x + headR*0.5, headY + headR*2.2);
+      ctx.quadraticCurveTo(x + headR*0.9, headY + headR, x + headR*0.7, headY + headR*0.2);
+      ctx.closePath(); ctx.fill();
     }
 
-    // Mustache
-    ctx.fillStyle = '#ddd';
-    ctx.beginPath();
-    ctx.ellipse(x, headY + headR * 0.3, headR * 0.5, headR * 0.12, 0, 0, Math.PI);
-    ctx.fill();
-
-    // === Small frown/mouth line ===
-    ctx.strokeStyle = '#c0a080';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(x - headR * 0.15, headY + headR * 0.35);
-    ctx.lineTo(x + headR * 0.15, headY + headR * 0.35);
-    ctx.stroke();
+    // Rage mode aura
+    if (b.rageMode) {
+      var rageGlow = ctx.createRadialGradient(x, y, 0, x, y, s * 2);
+      rageGlow.addColorStop(0, 'rgba(255,0,0,0)');
+      rageGlow.addColorStop(0.5, 'rgba(255,0,0,' + (0.15 + Math.sin(performance.now()/150) * 0.1) + ')');
+      rageGlow.addColorStop(1, 'rgba(255,0,0,0)');
+      ctx.fillStyle = rageGlow;
+      ctx.beginPath();
+      ctx.arc(x, y, s * 2, 0, 6.28);
+      ctx.fill();
+    }
 
     // Engine glow under ship
-    var glow = ctx.createRadialGradient(x, y + s*0.55, 0, x, y + s*0.55, s*0.5);
-    glow.addColorStop(0, 'rgba(255,100,0,0.6)');
+    var glowSize = b.rageMode ? s*0.7 : s*0.5;
+    var glow = ctx.createRadialGradient(x, y + s*0.55, 0, x, y + s*0.55, glowSize);
+    glow.addColorStop(0, b.rageMode ? 'rgba(255,0,0,0.8)' : 'rgba(255,100,0,0.6)');
     glow.addColorStop(1, 'rgba(255,0,0,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y + s*0.55, s*0.5, 0, 6.28);
+    ctx.arc(x, y + s*0.55, glowSize, 0, 6.28);
     ctx.fill();
 
     // === HP bar ===
@@ -1106,53 +1091,48 @@
 
     var cx = W / 2, cy = H / 2;
 
-    ctx.fillStyle = 'rgba(255,215,0,0.3)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 80, 0, 6.28);
-    ctx.fill();
+    // Golden glow background
+    var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 120);
+    glow.addColorStop(0, 'rgba(255,215,0,0.5)');
+    glow.addColorStop(0.4, 'rgba(255,180,0,0.2)');
+    glow.addColorStop(1, 'rgba(255,150,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(cx, cy, 120, 0, 6.28); ctx.fill();
 
-    ctx.fillStyle = '#ffcc88';
-    ctx.beginPath();
-    ctx.arc(cx, cy - 15, 30, 0, 6.28);
-    ctx.fill();
-    ctx.fillStyle = '#ffdd44';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy - 40, 32, 15, 0, 0, Math.PI);
-    ctx.fill();
-    ctx.fillStyle = '#3388ff';
-    ctx.beginPath();
-    ctx.arc(cx - 10, cy - 18, 3, 0, 6.28);
-    ctx.arc(cx + 10, cy - 18, 3, 0, 6.28);
-    ctx.fill();
-    ctx.strokeStyle = '#cc4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy - 8, 12, 0.2, Math.PI - 0.2);
-    ctx.stroke();
-    ctx.fillStyle = '#222';
-    ctx.fillRect(cx - 25, cy + 15, 50, 35);
-    ctx.fillStyle = '#ff0000';
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + 15);
-    ctx.lineTo(cx - 6, cy + 40);
-    ctx.lineTo(cx + 6, cy + 40);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#ffcc88';
-    ctx.beginPath();
-    ctx.ellipse(cx + 40, cy, 8, 12, -0.3, 0, 6.28);
-    ctx.fill();
-    ctx.fillStyle = '#ffcc88';
-    ctx.beginPath();
-    ctx.ellipse(cx + 42, cy - 18, 5, 10, 0, 0, 6.28);
-    ctx.fill();
+    // === REAL PHOTO ===
+    if (trumpLoaded) {
+      // Draw circular framed photo
+      ctx.save();
+      // Gold ring border
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(cx, cy - 5, 56, 0, 6.28); ctx.stroke();
+      // Clip to circle
+      ctx.beginPath(); ctx.arc(cx, cy - 5, 54, 0, 6.28); ctx.clip();
+      ctx.drawImage(trumpImg, cx - 54, cy - 59, 108, 135);
+      ctx.restore();
+    } else {
+      // Fallback simple face
+      ctx.fillStyle = '#e8a050';
+      ctx.beginPath(); ctx.ellipse(cx, cy - 12, 28, 32, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#daa520';
+      ctx.beginPath(); ctx.ellipse(cx, cy - 42, 34, 16, 0, 0, 6.28); ctx.fill();
+    }
 
-    ctx.fillStyle = '#ffd700';
-    ctx.font = '900 24px ' + FONT_TITLE;
+    // === American flags on sides ===
+    ctx.font = '28px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('TREMENDOUS!', cx, cy + 75);
-    ctx.font = 'bold 14px ' + FONT_HEB;
-    ctx.fillText('👍 +1 LIFE! 👍', cx, cy + 95);
+    ctx.fillText('🇺🇸', cx - 75, cy);
+    ctx.fillText('🇮🇱', cx + 75, cy);
+
+    // === TEXT ===
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '900 22px ' + FONT_TITLE;
+    ctx.textAlign = 'center';
+    ctx.fillText('TREMENDOUS!', cx, cy + 70);
+    ctx.font = 'bold 16px ' + FONT_HEB;
+    ctx.fillStyle = '#fff';
+    ctx.fillText('👍 +1 LIFE! 👍', cx, cy + 90);
 
     ctx.restore();
   }
@@ -1298,8 +1278,8 @@
     if (keys['ArrowDown'] || keys['KeyS_move'] || keys['mDown']) dy = 1;
     px += dx * PSPEED;
     py += dy * PSPEED;
-    var minY = H * 0.4;
-    var maxY = H - (isMobile ? 180 : 60);
+    var minY = H * 0.3;
+    var maxY = H - (isMobile ? 170 : 50);
     px = Math.max(PW/2 + 5, Math.min(W - PW/2 - 5, px));
     py = Math.max(minY, Math.min(maxY, py));
 
@@ -1381,36 +1361,122 @@
         boss.y += 1.5;
       } else {
         boss.moveTimer += dt;
-        boss.x += Math.sin(boss.moveTimer * 1.5) * 2;
-
         if (boss.flash > 0) boss.flash -= dt;
+
+        // Rage mode when HP < 30%
+        if (!boss.rageMode && boss.hp < boss.maxHp * 0.3) {
+          boss.rageMode = true;
+          addFloat(boss.x, boss.y - 40, '⚠ RAGE MODE! ⚠', '#ff0000');
+          shakeDur = 15;
+        }
+
+        var moveAmp = wave >= 12 ? 3.5 : (wave >= 9 ? 2.8 : 2);
+        var moveSpd = wave >= 12 ? 2.5 : (wave >= 9 ? 2.0 : 1.5);
+        if (boss.rageMode) { moveAmp *= 1.5; moveSpd *= 1.4; }
+
+        // Movement: sinusoidal + charging at high waves
+        if (wave >= 9 && boss.chargeTimer > 0) {
+          boss.chargeTimer -= dt;
+          boss.x += boss.chargeDir * 6;
+          boss.x = Math.max(boss.size, Math.min(W - boss.size, boss.x));
+        } else {
+          boss.x += Math.sin(boss.moveTimer * moveSpd) * moveAmp;
+          // Random charge at player for wave 9+
+          if (wave >= 9 && Math.random() < 0.003 * (boss.rageMode ? 3 : 1)) {
+            boss.chargeDir = px > boss.x ? 1 : -1;
+            boss.chargeTimer = 0.5;
+          }
+        }
+
+        // Determine attack pattern based on wave
+        var bulletSpeed = 3 + wave * 0.15;
+        if (boss.rageMode) bulletSpeed *= 1.3;
+        var burstMax = wave >= 12 ? 8 : (wave >= 9 ? 6 : 5);
+        var pauseTime = wave >= 12 ? 0.6 : (wave >= 9 ? 1.0 : 1.5);
+        if (boss.rageMode) pauseTime *= 0.6;
+        var shootInterval = wave >= 12 ? 0.15 : (wave >= 9 ? 0.2 : 0.3);
 
         if (boss.shootPhase === 0) {
           boss.shootTimer -= dt;
           if (boss.shootTimer <= 0) {
-            for (var s = -2; s <= 2; s++) {
+            // Attack pattern varies by wave
+            if (wave >= 12) {
+              // NIGHTMARE: spiral + spread + aimed
+              boss.spiralAngle += 0.4;
+              var numBullets = boss.rageMode ? 10 : 7;
+              for (var s = 0; s < numBullets; s++) {
+                var angle = boss.spiralAngle + (s / numBullets) * 6.28;
+                eBullets.push({
+                  x: boss.x, y: boss.y + boss.size * 0.6,
+                  vx: Math.cos(angle) * bulletSpeed * 0.7,
+                  vy: Math.sin(angle) * bulletSpeed * 0.5 + bulletSpeed * 0.5,
+                  boss: true
+                });
+              }
+              // Also fire aimed shot at player
+              var aimDx = px - boss.x, aimDy = py - boss.y;
+              var aimDist = Math.sqrt(aimDx*aimDx + aimDy*aimDy) || 1;
               eBullets.push({
-                x: boss.x + s * 15,
-                y: boss.y + boss.size * 0.6,
-                vx: s * 0.8,
-                vy: 3 + wave * 0.15,
+                x: boss.x, y: boss.y + boss.size * 0.6,
+                vx: (aimDx/aimDist) * bulletSpeed * 1.2,
+                vy: (aimDy/aimDist) * bulletSpeed * 1.2,
                 boss: true
               });
-            }
-            boss.burstCount++;
-            if (boss.burstCount >= 5) {
-              boss.shootPhase = 1;
-              boss.pauseTimer = 1.5;
-              boss.burstCount = 0;
+            } else if (wave >= 9) {
+              // RAGE: alternating spread + aimed bursts
+              if (boss.burstCount % 2 === 0) {
+                // Wide spread
+                for (var s = -3; s <= 3; s++) {
+                  eBullets.push({
+                    x: boss.x + s * 12,
+                    y: boss.y + boss.size * 0.6,
+                    vx: s * 1.0,
+                    vy: bulletSpeed,
+                    boss: true
+                  });
+                }
+              } else {
+                // Aimed triple shot at player
+                var aimDx = px - boss.x, aimDy = py - boss.y;
+                var aimDist = Math.sqrt(aimDx*aimDx + aimDy*aimDy) || 1;
+                for (var sp = -1; sp <= 1; sp++) {
+                  eBullets.push({
+                    x: boss.x + sp * 15,
+                    y: boss.y + boss.size * 0.6,
+                    vx: (aimDx/aimDist) * bulletSpeed + sp * 0.5,
+                    vy: (aimDy/aimDist) * bulletSpeed,
+                    boss: true
+                  });
+                }
+              }
             } else {
-              boss.shootTimer = 0.3;
+              // Normal boss: simple spread
+              for (var s = -2; s <= 2; s++) {
+                eBullets.push({
+                  x: boss.x + s * 15,
+                  y: boss.y + boss.size * 0.6,
+                  vx: s * 0.8,
+                  vy: bulletSpeed,
+                  boss: true
+                });
+              }
+            }
+
+            boss.burstCount++;
+            if (boss.burstCount >= burstMax) {
+              boss.shootPhase = 1;
+              boss.pauseTimer = pauseTime;
+              boss.burstCount = 0;
+              boss.attackPattern = (boss.attackPattern + 1) % 3;
+            } else {
+              boss.shootTimer = shootInterval;
             }
           }
         } else {
           boss.pauseTimer -= dt;
           if (boss.pauseTimer <= 0) {
             boss.shootPhase = 0;
-            boss.shootTimer = 0.3;
+            boss.shootTimer = shootInterval;
           }
         }
       }
@@ -1633,6 +1699,7 @@
 
   function doGameOver() {
     gameState = GAMEOVER;
+    stopMusic();
     document.getElementById('hud').style.display = 'none';
     if (isMobile) document.getElementById('mobileControls').style.display = 'none';
 
@@ -1663,6 +1730,153 @@
     el.innerHTML = html;
   }
 
+  // ===== LO-FI SYNTH GAME MUSIC ENGINE =====
+  var musicCtx = null;
+  var musicPlaying = false;
+  var musicGain = null;
+  var musicBPM = 128;
+  var musicStep = 0;
+  var musicInterval = null;
+
+  function initMusic() {
+    if (musicCtx) return;
+    try {
+      musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+      musicGain = musicCtx.createGain();
+      musicGain.gain.value = 0.18;
+      musicGain.connect(musicCtx.destination);
+    } catch(e) { return; }
+  }
+
+  function playNote(freq, startTime, dur, type, vol, dest) {
+    if (!musicCtx) return;
+    var osc = musicCtx.createOscillator();
+    var g = musicCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.12, startTime);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+    osc.connect(g);
+    g.connect(dest || musicGain);
+    osc.start(startTime);
+    osc.stop(startTime + dur + 0.05);
+  }
+
+  function playDrum(type, startTime) {
+    if (!musicCtx) return;
+    var osc = musicCtx.createOscillator();
+    var g = musicCtx.createGain();
+    osc.connect(g); g.connect(musicGain);
+
+    if (type === 'kick') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, startTime);
+      osc.frequency.exponentialRampToValueAtTime(30, startTime + 0.12);
+      g.gain.setValueAtTime(0.35, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+      osc.start(startTime); osc.stop(startTime + 0.25);
+    } else if (type === 'snare') {
+      // Noise-like snare using high-freq oscillator
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(300, startTime);
+      osc.frequency.linearRampToValueAtTime(100, startTime + 0.08);
+      g.gain.setValueAtTime(0.18, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.1);
+      osc.start(startTime); osc.stop(startTime + 0.15);
+      // Add noise component
+      var n = musicCtx.createOscillator();
+      var ng = musicCtx.createGain();
+      n.type = 'sawtooth'; n.frequency.value = 3500;
+      ng.gain.setValueAtTime(0.08, startTime);
+      ng.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+      n.connect(ng); ng.connect(musicGain);
+      n.start(startTime); n.stop(startTime + 0.12);
+    } else if (type === 'hat') {
+      osc.type = 'square';
+      osc.frequency.value = 6000 + Math.random() * 2000;
+      g.gain.setValueAtTime(0.04, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.04);
+      osc.start(startTime); osc.stop(startTime + 0.06);
+    }
+  }
+
+  // Hatikvah-inspired lo-fi melody (D minor, heroic feel)
+  var melodyNotes = [
+    // Bar 1-2: Iconic Hatikvah opening motif (lo-fi adaptation)
+    293.7, 329.6, 349.2, 392.0, 440.0, 392.0, 349.2, 329.6,
+    293.7, 261.6, 293.7, 349.2, 329.6, 293.7, 261.6, 246.9,
+    // Bar 3-4: Development
+    293.7, 349.2, 392.0, 440.0, 493.9, 440.0, 392.0, 349.2,
+    329.6, 349.2, 392.0, 349.2, 329.6, 293.7, 329.6, 293.7,
+    // Bar 5-6: Ascending heroic passage
+    220.0, 261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9,
+    523.3, 493.9, 440.0, 392.0, 440.0, 493.9, 523.3, 440.0,
+    // Bar 7-8: Resolution
+    349.2, 392.0, 440.0, 523.3, 493.9, 440.0, 392.0, 349.2,
+    293.7, 329.6, 349.2, 293.7, 261.6, 293.7, 220.0, 0
+  ];
+
+  // Bass line (root notes, D minor)
+  var bassNotes = [
+    146.8, 0, 146.8, 0, 174.6, 0, 174.6, 0,
+    130.8, 0, 130.8, 0, 146.8, 0, 146.8, 0,
+    146.8, 0, 174.6, 0, 196.0, 0, 196.0, 0,
+    164.8, 0, 164.8, 0, 146.8, 0, 146.8, 0,
+    110.0, 0, 130.8, 0, 146.8, 0, 174.6, 0,
+    196.0, 0, 196.0, 0, 220.0, 0, 220.0, 0,
+    174.6, 0, 196.0, 0, 220.0, 0, 174.6, 0,
+    146.8, 0, 146.8, 0, 130.8, 0, 110.0, 0
+  ];
+
+  function scheduleBar() {
+    if (!musicCtx || !musicPlaying) return;
+    var stepDur = 60 / musicBPM / 2; // 16th-note duration at BPM
+    var now = musicCtx.currentTime;
+
+    for (var i = 0; i < 16; i++) {
+      var t = now + i * stepDur;
+      var idx = (musicStep + i) % melodyNotes.length;
+
+      // Melody - detuned square wave (lo-fi feel)
+      if (melodyNotes[idx] > 0) {
+        playNote(melodyNotes[idx] * 0.997, t, stepDur * 1.5, 'square', 0.06);
+        playNote(melodyNotes[idx] * 1.003, t, stepDur * 1.5, 'square', 0.06);
+      }
+
+      // Bass - saw wave sub
+      if (bassNotes[idx] > 0) {
+        playNote(bassNotes[idx], t, stepDur * 1.8, 'sawtooth', 0.10);
+      }
+
+      // Drums: kick on 1, 5, 9, 13  |  snare on 5, 13  |  hat on every other
+      if (i % 4 === 0) playDrum('kick', t);
+      if (i % 8 === 4) playDrum('snare', t);
+      if (i % 2 === 0) playDrum('hat', t);
+      // Extra ghost hi-hats for groove
+      if (i % 4 === 3 && Math.random() > 0.4) playDrum('hat', t - stepDur * 0.25);
+    }
+
+    musicStep = (musicStep + 16) % melodyNotes.length;
+  }
+
+  function startMusic() {
+    initMusic();
+    if (!musicCtx) return;
+    if (musicCtx.state === 'suspended') musicCtx.resume();
+    musicPlaying = true;
+    musicStep = 0;
+    scheduleBar();
+    var barDur = (60 / musicBPM / 2) * 16 * 1000;
+    musicInterval = setInterval(function() {
+      if (musicPlaying) scheduleBar();
+    }, barDur - 50); // schedule slightly ahead
+  }
+
+  function stopMusic() {
+    musicPlaying = false;
+    if (musicInterval) { clearInterval(musicInterval); musicInterval = null; }
+  }
+
   function startGame() {
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('gameOverScreen').classList.add('hidden');
@@ -1683,13 +1897,14 @@
     boss = null;
 
     px = W / 2;
-    py = H - (isMobile ? 200 : 80);
+    py = H - (isMobile ? 190 : 80);
     pInvincible = 0;
 
     updateHUD();
     updateStealthBtn();
     gameState = WAVE_INTRO;
     waveTimer = 2.0;
+    startMusic();
   }
 
   // ===== MAIN RENDER LOOP =====
