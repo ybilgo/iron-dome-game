@@ -313,6 +313,60 @@
   @media (pointer: fine) and (min-width: 901px) {
     #mobileControls { display: none !important; }
   }
+
+  .char-card {
+    background: rgba(30,40,80,0.7);
+    border: 2px solid rgba(96,165,250,0.3);
+    border-radius: 12px;
+    padding: 10px 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    touch-action: manipulation;
+  }
+  .char-card:hover, .char-card.selected {
+    border-color: #60a5fa;
+    background: rgba(40,60,120,0.8);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(96,165,250,0.4);
+  }
+  .char-card img {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.3);
+    display: block;
+    margin: 0 auto 6px;
+  }
+  .char-card .char-label {
+    color: #fff;
+    font-size: 0.65rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+  }
+  .char-card canvas {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    display: block;
+    margin: 0 auto 6px;
+  }
+  .char-start-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 12px 40px;
+    background: linear-gradient(135deg, #0038b8, #0050d0);
+    color: #fff;
+    border: 2px solid #60a5fa;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-weight: 900;
+    font-size: clamp(0.9rem,3vw,1.1rem);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.2s;
+  }
+  .char-start-btn:hover { background: #0050d0; transform: scale(1.05); }
 </style>
 </head>
 <body>
@@ -333,6 +387,15 @@
   </div>
 </div>
 
+<div class="overlay hidden" id="charSelectScreen" style="overflow-y:auto;padding:20px 10px;">
+  <div class="hebrew-title" style="font-size:clamp(1.2rem,4vw,1.8rem)">🦁 בחר את הלוחם שלך 🦁</div>
+  <div class="title" style="font-size:clamp(1rem,3vw,1.5rem)">CHOOSE YOUR DEFENDER</div>
+  <div id="charGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;max-width:600px;margin:15px auto;direction:ltr;"></div>
+  <div id="charName" style="color:#60a5fa;font-size:clamp(1rem,3vw,1.3rem);font-weight:900;margin:8px 0;font-family:'Courier New',monospace;"></div>
+  <div id="charDesc" style="color:#aaa;font-size:clamp(0.7rem,2vw,0.85rem);font-family:Arial,sans-serif;max-width:400px;margin:0 auto;"></div>
+  <div id="highScoreDisplay" style="margin:12px auto;max-width:400px;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
+</div>
+
 <div class="overlay hidden" id="countdownScreen">
   <div class="countdown-num" id="countdownNum">3</div>
   <div class="countdown-sub">הכן שאגת הארי...</div>
@@ -344,6 +407,7 @@
   <div class="score-display" id="finalScore">0</div>
   <div class="subtitle" id="finalWave" style="font-size:clamp(1rem,3vw,1.2rem)">גל 1</div>
   <div class="motto" id="endMessage">עם ישראל חי!</div>
+  <div id="goHighScore" style="color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.8rem,2.5vw,1rem);margin:8px 0;"></div>
   <div class="tap-hint" id="tapHint" style="display:none">TAP TO PLAY AGAIN<br><span style="font-family:Arial,sans-serif;font-size:0.85em">לחץ כדי לשחק שוב</span></div>
 </div>
 
@@ -353,6 +417,7 @@
   <div class="hud-item"><span>HP</span><span class="hud-value" id="hudHP">3</span></div>
   <div class="hud-item"><span>LIVES</span><div class="hud-lives" id="hudLives"></div></div>
   <div class="hud-item"><span>KILLS</span><span class="hud-value" id="hudKills">0</span></div>
+  <div class="hud-item"><span>RANK</span><span class="hud-value" id="hudRank">טוראי</span></div>
 </div>
 
 <!-- NEW LAYOUT: Fire on LEFT, D-pad on RIGHT -->
@@ -470,6 +535,148 @@
   var trumpLoaded = false;
   trumpImg.onload = function() { trumpLoaded = true; };
 
+  // === NEW BOSS PHOTOS ===
+  var sinwarImg = new Image();
+  sinwarImg.crossOrigin = 'anonymous';
+  sinwarImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Yahya_al-Sinwar_2011_crop.JPG/200px-Yahya_al-Sinwar_2011_crop.JPG';
+  var sinwarLoaded = false;
+  sinwarImg.onload = function() { sinwarLoaded = true; };
+
+  var nasrallahImg = new Image();
+  nasrallahImg.crossOrigin = 'anonymous';
+  nasrallahImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Portrait_of_Hassan_Nasrallah.jpg/200px-Portrait_of_Hassan_Nasrallah.jpg';
+  var nasrallahLoaded = false;
+  nasrallahImg.onload = function() { nasrallahLoaded = true; };
+
+  var ahmadinejadImg = new Image();
+  ahmadinejadImg.crossOrigin = 'anonymous';
+  ahmadinejadImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mahmoud_Ahmadinejad_crop.jpg/200px-Mahmoud_Ahmadinejad_crop.jpg';
+  var ahmadinejadLoaded = false;
+  ahmadinejadImg.onload = function() { ahmadinejadLoaded = true; };
+
+  // === DEFENDER PHOTOS ===
+  var goldaImg = new Image();
+  goldaImg.crossOrigin = 'anonymous';
+  goldaImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Golda_Meir_%281964%29.jpg/200px-Golda_Meir_%281964%29.jpg';
+  var goldaLoaded = false;
+  goldaImg.onload = function() { goldaLoaded = true; };
+
+  var benGurionImg = new Image();
+  benGurionImg.crossOrigin = 'anonymous';
+  benGurionImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Ben_Gurion_1959.jpg/200px-Ben_Gurion_1959.jpg';
+  var benGurionLoaded = false;
+  benGurionImg.onload = function() { benGurionLoaded = true; };
+
+  var idanImg = new Image();
+  idanImg.crossOrigin = 'anonymous';
+  idanImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/%D7%A2%D7%99%D7%93%D7%9F_%D7%A2%D7%9E%D7%93%D7%99.jpg/200px-%D7%A2%D7%99%D7%93%D7%9F_%D7%A2%D7%9E%D7%93%D7%99.jpg';
+  var idanLoaded = false;
+  idanImg.onload = function() { idanLoaded = true; };
+
+  var lionPhotoImg = new Image();
+  lionPhotoImg.crossOrigin = 'anonymous';
+  lionPhotoImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Hear_me_roar_%28Unsplash%29.jpg/200px-Hear_me_roar_%28Unsplash%29.jpg';
+  var lionPhotoLoaded = false;
+  lionPhotoImg.onload = function() { lionPhotoLoaded = true; };
+
+
+
+  // ===== DEFENDER SYSTEM =====
+  var defenders = [
+    { id: 'lion', name: 'אריה כחול-לבן', nameEn: 'Blue-White Lion', desc: 'הלוחם המקורי - כוח ועוצמה', type: 'canvas' },
+    { id: 'golda', name: 'גולדה מאיר', nameEn: 'Golda Meir', desc: 'אם האומה - שריון נוסף בהתחלה', type: 'photo' },
+    { id: 'bengurion', name: 'דוד בן גוריון', nameEn: 'Ben-Gurion', desc: 'המייסד - בונוס ניקוד x1.5', type: 'photo' },
+    { id: 'idan', name: 'עידן עמדי', nameEn: 'Idan Amedi', desc: 'הלוחם הזמר - מהירות ירי גבוהה', type: 'photo' },
+    { id: 'lionphoto', name: 'אריה אמיתי', nameEn: 'Real Lion', desc: 'מלך החיות - נזק כפול', type: 'photo' }
+  ];
+  var selectedDefender = 'lion';
+
+  function getDefenderImg(id) {
+    if (id === 'golda') return { img: goldaImg, loaded: goldaLoaded };
+    if (id === 'bengurion') return { img: benGurionImg, loaded: benGurionLoaded };
+    if (id === 'idan') return { img: idanImg, loaded: idanLoaded };
+    if (id === 'lionphoto') return { img: lionPhotoImg, loaded: lionPhotoLoaded };
+    return null;
+  }
+
+  // ===== MILITARY RANK SYSTEM =====
+  var ranks = [
+    { name: 'טוראי', nameEn: 'Private', kills: 0 },
+    { name: 'רב-טוראי', nameEn: 'Corporal', kills: 350 },
+    { name: 'סמל', nameEn: 'Sergeant', kills: 700 },
+    { name: 'סמל ראשון', nameEn: 'Staff Sgt', kills: 1050 },
+    { name: 'רב-סמל', nameEn: 'Master Sgt', kills: 1400 },
+    { name: 'רס"ב', nameEn: 'Sgt Major', kills: 1750 },
+    { name: 'סגן', nameEn: 'Lieutenant', kills: 2100 },
+    { name: 'סרן', nameEn: 'Captain', kills: 2450 },
+    { name: 'רב-סרן', nameEn: 'Major', kills: 2800 },
+    { name: 'סגן-אלוף', nameEn: 'Lt. Colonel', kills: 3150 },
+    { name: 'אלוף-משנה', nameEn: 'Colonel', kills: 3500 },
+    { name: 'תת-אלוף', nameEn: 'Brigadier', kills: 3850 },
+    { name: 'אלוף', nameEn: 'Major General', kills: 4200 },
+    { name: 'רב-אלוף', nameEn: 'Lt. General', kills: 4550 }
+  ];
+  var currentRankIdx = 0;
+
+  function getCurrentRank() { return ranks[currentRankIdx]; }
+
+  function checkRankUp() {
+    if (currentRankIdx >= ranks.length - 1) return;
+    var nextRank = ranks[currentRankIdx + 1];
+    if (totalKills >= nextRank.kills) {
+      currentRankIdx++;
+      lives++;
+      maxPlayerHP = Math.min(maxPlayerHP + 1, 8);
+      playerHP = Math.min(playerHP + 1, maxPlayerHP);
+      // Strengthen base shots
+      if (currentRankIdx % 3 === 0 && shotStreams < 4) shotStreams++;
+      addFloat(W/2, H/2 - 40, 'RANK UP! ' + getCurrentRank().name, '#ffd700');
+      addFloat(W/2, H/2, '+1 LIFE  +1 HP  ⬆️', '#22ff44');
+      playSfxWaveStart();
+      updateHUD();
+    }
+  }
+
+  // ===== HIGH SCORES =====
+  var HIGH_SCORE_KEY = 'lionRoarHighScores';
+  function getHighScores() {
+    try {
+      var data = localStorage.getItem(HIGH_SCORE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch(e) { return []; }
+  }
+  function saveHighScore(name, scr, wv, kills, defender) {
+    var scores = getHighScores();
+    scores.push({ name: name, score: scr, wave: wv, kills: kills, defender: defender, date: Date.now() });
+    scores.sort(function(a,b) { return b.score - a.score; });
+    scores = scores.slice(0, 10);
+    try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(scores)); } catch(e) {}
+    return scores;
+  }
+  function isHighScore(scr) {
+    var scores = getHighScores();
+    return scores.length < 10 || scr > (scores[scores.length - 1] || {score:0}).score;
+  }
+  function renderHighScores(targetId) {
+    var scores = getHighScores();
+    var el = document.getElementById(targetId);
+    if (!el || scores.length === 0) { if(el) el.innerHTML = ''; return; }
+    var h = '🏆 HIGH SCORES 🏆<br>';
+    for (var i = 0; i < Math.min(scores.length, 5); i++) {
+      var s = scores[i];
+      h += (i+1) + '. ' + (s.name||'???') + ' - ' + s.score + ' (Wave ' + s.wave + ')<br>';
+    }
+    el.innerHTML = h;
+  }
+
+  // ===== BOSS ROTATION =====
+  var bossCharacters = [
+    { name: 'Khamenei', nameHe: 'חמינאי', img: function() { return khameneiImg; }, loaded: function() { return khameneiLoaded; } },
+    { name: 'Sinwar', nameHe: 'סינוואר', img: function() { return sinwarImg; }, loaded: function() { return sinwarLoaded; } },
+    { name: 'Nasrallah', nameHe: 'נסראללה', img: function() { return nasrallahImg; }, loaded: function() { return nasrallahLoaded; } },
+    { name: 'Ahmadinejad', nameHe: "אחמדינג\'ד", img: function() { return ahmadinejadImg; }, loaded: function() { return ahmadinejadLoaded; } }
+  ];
+
   var keys = {};
   var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
@@ -493,14 +700,64 @@
   var bossColors = ['#44aa44', '#dd4444', '#4488ff', '#ffaa00', '#ff44ff', '#44ffff', '#ff8800', '#aa44ff'];
 
   // ===== START SEQUENCE =====
-  function beginCountdown() {
+  function showCharSelect() {
     ensureAudioReady();
     document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('countdownScreen').classList.remove('hidden');
-    runCountdown(function() {
-      document.getElementById('countdownScreen').classList.add('hidden');
-      startGame();
+    var cs = document.getElementById('charSelectScreen');
+    cs.classList.remove('hidden');
+    buildCharGrid();
+    renderHighScores('highScoreDisplay');
+  }
+
+  function buildCharGrid() {
+    var grid = document.getElementById('charGrid');
+    grid.innerHTML = '';
+    for (var i = 0; i < defenders.length; i++) {
+      (function(d, idx) {
+        var card = document.createElement('div');
+        card.className = 'char-card' + (d.id === selectedDefender ? ' selected' : '');
+        if (d.type === 'photo') {
+          var di = getDefenderImg(d.id);
+          card.innerHTML = '<img src="' + (di ? di.img.src : '') + '" alt="' + d.nameEn + '"><div class="char-label">' + d.name + '</div>';
+        } else {
+          // Lion - draw on small canvas
+          card.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#0038b8,#001a5c);margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">🦁</div><div class="char-label">' + d.name + '</div>';
+        }
+        card.addEventListener('click', function() {
+          selectedDefender = d.id;
+          var cards = grid.querySelectorAll('.char-card');
+          for (var j = 0; j < cards.length; j++) cards[j].classList.remove('selected');
+          card.classList.add('selected');
+          document.getElementById('charName').textContent = d.name + ' - ' + d.nameEn;
+          document.getElementById('charDesc').textContent = d.desc;
+        });
+        card.addEventListener('touchstart', function(){}, {passive:true}); // ensure fast touch
+        grid.appendChild(card);
+      })(defenders[i], i);
+    }
+    // Start button
+    var startDiv = document.createElement('div');
+    startDiv.style.cssText = 'grid-column: 1 / -1; text-align: center;';
+    startDiv.innerHTML = '<button class="char-start-btn" id="charStartBtn">🚀 התחל משימה! START! 🚀</button>';
+    grid.appendChild(startDiv);
+    document.getElementById('charStartBtn').addEventListener('click', function() {
+      document.getElementById('charSelectScreen').classList.add('hidden');
+      document.getElementById('countdownScreen').classList.remove('hidden');
+      runCountdown(function() {
+        document.getElementById('countdownScreen').classList.add('hidden');
+        startGame();
+      });
     });
+    // Set initial selection display
+    var sel = defenders.find(function(d) { return d.id === selectedDefender; });
+    if (sel) {
+      document.getElementById('charName').textContent = sel.name + ' - ' + sel.nameEn;
+      document.getElementById('charDesc').textContent = sel.desc;
+    }
+  }
+
+  function beginCountdown() {
+    showCharSelect();
   }
 
   if (isMobile) {
@@ -559,11 +816,7 @@
 
   function restartWithCountdown() {
     gameOverScreen.classList.add('hidden');
-    document.getElementById('countdownScreen').classList.remove('hidden');
-    runCountdown(function() {
-      document.getElementById('countdownScreen').classList.add('hidden');
-      startGame();
-    });
+    showCharSelect();
   }
 
   // ===== SPAWN WAVE =====
@@ -580,14 +833,19 @@
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         var baseHp = r === 0 ? 2 : 1;
+        var isSplitter = (wave >= 20 && r === 0 && Math.random() < 0.35);
+        var isKamikaze = (wave >= 30 && r > 0 && Math.random() < 0.2);
         enemies.push({
           x: sx + c * spX,
           y: sy + r * 46,
-          size: 18,
-          hp: baseHp + hpBonus,
-          maxHp: baseHp + hpBonus,
+          size: isSplitter ? 22 : 18,
+          hp: (baseHp + hpBonus) * (isSplitter ? 2 : 1),
+          maxHp: (baseHp + hpBonus) * (isSplitter ? 2 : 1),
           flash: 0,
-          shootCD: 2000 + Math.random() * 4000
+          shootCD: 2000 + Math.random() * 4000,
+          splitter: isSplitter,
+          kamikaze: isKamikaze,
+          kamikazeActive: false
         });
       }
     }
@@ -608,18 +866,18 @@
       baseHP = 80;
       extraHP = (bossNum - 1) * 25;
       bossSize = 65;
-      label = '💀 NIGHTMARE #' + bossNum + ' 💀';
+      label = '💀 ' + bossCharacters[(bossNum-1) % bossCharacters.length].nameHe + ' #' + bossNum + ' 💀';
     } else if (wave >= 9) {
       // RAGE tier: very tough
       baseHP = 55;
       extraHP = (bossNum - 1) * 18;
       bossSize = 58;
-      label = '🔥 RAGE BOSS #' + bossNum + ' 🔥';
+      label = '🔥 ' + bossCharacters[(bossNum-1) % bossCharacters.length].nameHe + ' #' + bossNum + ' 🔥';
     } else {
       baseHP = 30;
       extraHP = (bossNum - 1) * 10;
       bossSize = 50;
-      label = 'BOSS #' + bossNum;
+      label = bossCharacters[(bossNum-1) % bossCharacters.length].nameHe + ' #' + bossNum;
     }
 
     boss = {
@@ -771,10 +1029,67 @@
     ctx.fill();
   }
 
+  function drawPhotoDefender(defInfo) {
+    var x = px, y = py;
+    var s = 1;
+    // Platform / vehicle
+    ctx.fillStyle = '#0038b8';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 10*s, 28*s, 12*s, 0, 0, 6.28);
+    ctx.fill();
+    // Blue-white stripes
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - 26*s, y + 4*s, 52*s, 3*s);
+    ctx.fillRect(x - 26*s, y + 14*s, 52*s, 3*s);
+    // Star of David on platform
+    drawStarOfDavid(x, y + 10*s, 6, '#ffffff');
+    // Photo circle
+    if (defInfo.img && defInfo.img.complete && defInfo.img.naturalWidth > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y - 12*s, 18*s, 0, 6.28);
+      ctx.clip();
+      ctx.drawImage(defInfo.img, x - 18*s, y - 30*s, 36*s, 36*s);
+      ctx.restore();
+    }
+    // Border around photo
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y - 12*s, 18*s, 0, 6.28);
+    ctx.stroke();
+    // Glow
+    ctx.shadowColor = '#0038b8';
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = '#0050d0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y - 12*s, 20*s, 0, 6.28);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Name label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 8px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    var def = defenders.find(function(d) { return d.id === selectedDefender; });
+    if (def) ctx.fillText(def.name, x, y + 26*s);
+    // Rank badge
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 7px Arial, sans-serif';
+    ctx.fillText(getCurrentRank().name, x, y - 34*s);
+  }
+
   function drawPlayer() {
     ctx.save();
     if (pInvincible > 0 && Math.floor(performance.now() / 80) % 2 === 0) {
       ctx.globalAlpha = 0.3;
+    }
+    // Photo-based defenders
+    var defInfo = getDefenderImg(selectedDefender);
+    if (defInfo && selectedDefender !== 'lion') {
+      drawPhotoDefender(defInfo);
+      ctx.restore();
+      return;
     }
 
     // Shield glow when invincible
@@ -989,6 +1304,40 @@
   }
 
   function drawEnemy(e) {
+    // Special enemy indicators
+    if (e.splitter) {
+      ctx.save();
+      ctx.strokeStyle = '#ff44ff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.size + 5, 0, 6.28);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    if (e.kamikazeActive) {
+      ctx.save();
+      var kamPulse = 0.5 + Math.sin(performance.now() / 100) * 0.5;
+      ctx.strokeStyle = 'rgba(255,0,0,' + kamPulse + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.size + 4, 0, 6.28);
+      ctx.stroke();
+      ctx.fillStyle = '#ff0000';
+      ctx.font = 'bold 8px ' + FONT_TITLE;
+      ctx.textAlign = 'center';
+      ctx.fillText('💣', e.x, e.y - e.size - 4);
+      ctx.restore();
+    }
+    if (e.splitChild) {
+      ctx.save();
+      ctx.fillStyle = '#ff88ff';
+      ctx.font = 'bold 6px ' + FONT_TITLE;
+      ctx.textAlign = 'center';
+      ctx.fillText('mini', e.x, e.y - e.size - 2);
+      ctx.restore();
+    }
     ctx.save();
     var x = e.x, y = e.y, s = e.size;
     if (e.flash > 0) ctx.globalAlpha = 0.4 + Math.sin(performance.now() / 40) * 0.3;
@@ -1105,31 +1454,24 @@
     ctx.ellipse(x, y - s * 0.15, s * 0.55, s * 0.6, 0, Math.PI + 0.3, -0.3);
     ctx.stroke();
 
-    // === CHARACTER: Khamenei (real photo) ===
-    if (khameneiLoaded) {
-      // Draw real photo inside the dome, clipped to circular shape
+    // === CHARACTER: Rotating bosses (real photos) ===
+    var bossCharIdx = (b.bossNum - 1) % bossCharacters.length;
+    var bossChar = bossCharacters[bossCharIdx];
+    var bossImg = bossChar.img();
+    var bossImgLoaded = bossChar.loaded();
+    if (bossImgLoaded) {
       ctx.save();
       ctx.beginPath();
       ctx.arc(x, y - s * 0.2, s * 0.48, 0, 6.28);
       ctx.clip();
       var imgSize = s * 1.0;
-      ctx.drawImage(khameneiImg, x - imgSize * 0.5, y - s * 0.2 - imgSize * 0.6, imgSize, imgSize * 1.25);
+      ctx.drawImage(bossImg, x - imgSize * 0.5, y - s * 0.2 - imgSize * 0.6, imgSize, imgSize * 1.25);
       ctx.restore();
     } else {
-      // Fallback: simple face if image not loaded
       var headY = y - s * 0.35;
       var headR = s * 0.22;
       ctx.fillStyle = '#e8c8a0';
       ctx.beginPath(); ctx.arc(x, headY, headR, 0, 6.28); ctx.fill();
-      ctx.fillStyle = '#111';
-      ctx.beginPath(); ctx.ellipse(x, headY - headR*0.55, headR*1.1, headR*0.7, 0, 0, 6.28); ctx.fill();
-      ctx.fillStyle = '#e8e8e8';
-      ctx.beginPath();
-      ctx.moveTo(x - headR*0.7, headY + headR*0.2);
-      ctx.quadraticCurveTo(x - headR*0.9, headY + headR, x - headR*0.5, headY + headR*2.2);
-      ctx.quadraticCurveTo(x, headY + headR*2.8, x + headR*0.5, headY + headR*2.2);
-      ctx.quadraticCurveTo(x + headR*0.9, headY + headR, x + headR*0.7, headY + headR*0.2);
-      ctx.closePath(); ctx.fill();
     }
 
     // Rage mode aura
@@ -1452,6 +1794,22 @@
       lastShot = now;
     }
 
+
+    // Kamikaze behavior: random enemies break formation and dive at player
+    if (wave >= 30) {
+      for (var ki = 0; ki < enemies.length; ki++) {
+        var ke = enemies[ki];
+        if (ke.kamikaze && !ke.kamikazeActive && Math.random() < 0.001) {
+          ke.kamikazeActive = true;
+        }
+        if (ke.kamikazeActive) {
+          var kdx = px - ke.x, kdy = py - ke.y;
+          var kd = Math.sqrt(kdx*kdx + kdy*kdy) || 1;
+          ke.x += (kdx/kd) * 3.5;
+          ke.y += (kdy/kd) * 3.5;
+        }
+      }
+    }
     // Update stealth plane
     if (stealthPlane) {
       stealthPlane.x += 8;
@@ -1719,13 +2077,33 @@
             comboCount++;
             comboTimer = 2.5;
             var pts = 10 * comboCount;
+            if (selectedDefender === 'bengurion') pts = Math.floor(pts * 1.5);
             score += pts;
             totalKills++;
             killsSinceLastStealth++;
+            checkRankUp();
             boom(e.x, e.y);
             playSfxKill();
             addFloat(e.x, e.y - 12, '+' + pts, comboCount > 3 ? '#fbbf24' : '#60a5fa');
             maybeSpawnPowerUp(e.x, e.y);
+            // Splitter: spawn 2 small enemies
+            if (e.splitter) {
+              for (var si = 0; si < 2; si++) {
+                enemies.push({
+                  x: e.x + (si === 0 ? -15 : 15),
+                  y: e.y,
+                  size: 12,
+                  hp: Math.max(1, Math.floor(e.maxHp * 0.4)),
+                  maxHp: Math.max(1, Math.floor(e.maxHp * 0.4)),
+                  flash: 0,
+                  shootCD: 1500 + Math.random() * 2000,
+                  splitter: false,
+                  splitChild: true,
+                  kamikaze: false
+                });
+              }
+              addFloat(e.x, e.y + 10, 'SPLIT!', '#ff44ff');
+            }
             enemies.splice(ei, 1);
 
             if (killsSinceLastStealth >= 30 && !stealthReady) {
@@ -1898,6 +2276,16 @@
     var msgs = ['עם ישראל חי! 🇮🇱','שאגת הארי! 🦁','ביחד ננצח! 💪','Am Yisrael Chai! 🇮🇱','ישראל חזקה! 💙'];
     document.getElementById('endMessage').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 
+    // High score check
+    if (isHighScore(score)) {
+      var playerName = prompt('🏆 שיא חדש! הכנס שם:\nNew High Score! Enter name:', 'Player') || 'Player';
+      saveHighScore(playerName, score, wave, totalKills, selectedDefender);
+      document.getElementById('goHighScore').innerHTML = '🏆 NEW HIGH SCORE! 🏆';
+    } else {
+      document.getElementById('goHighScore').innerHTML = '';
+    }
+    renderHighScores('goHighScore');
+
     document.getElementById('tapHint').style.display = 'none';
     gameOverReady = false;
     setTimeout(function() {
@@ -1911,6 +2299,7 @@
     document.getElementById('hudWave').textContent = wave;
     document.getElementById('hudHP').textContent = playerHP + '/' + maxPlayerHP;
     document.getElementById('hudKills').textContent = totalKills;
+    document.getElementById('hudRank').textContent = getCurrentRank().name;
     var el = document.getElementById('hudLives');
     var html = '';
     for (var i = 0; i < Math.max(lives, 3); i++) html += '<span>' + (i < lives ? '❤️' : '🖤') + '</span>';
@@ -2397,6 +2786,18 @@
     px = W / 2;
     py = H - (isMobile ? 190 : 80);
     pInvincible = 0;
+    currentRankIdx = 0;
+
+    // Defender-specific bonuses
+    if (selectedDefender === 'golda') {
+      maxPlayerHP = 5; playerHP = 5; // Extra armor
+    }
+    if (selectedDefender === 'idan') {
+      fireRateMultiplier = 1.5; // Faster shooting
+    }
+    if (selectedDefender === 'lionphoto') {
+      ammoType = 1; // Starts with explosive ammo
+    }
 
     updateHUD();
     updateStealthBtn();
