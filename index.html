@@ -453,7 +453,7 @@
     H = window.innerHeight;
     // On mobile, zoom out to show more game area
     if (isMobile) {
-      mobileScale = 0.62;
+      mobileScale = 0.45;
       W = Math.round(W / mobileScale);
       H = Math.round(H / mobileScale);
     }
@@ -505,6 +505,9 @@
 
   var powerUps = [];
   var trumpTimer = 0;
+  var guaranteedPowerUpTimer = 0;
+  var hasMagnet = false;
+  var magnetTimer = 0;
 
   var pBullets = [];
   var enemies = [];
@@ -579,15 +582,31 @@
   var lionPhotoLoaded = false;
   lionPhotoImg.onload = function() { lionPhotoLoaded = true; };
 
+  // Mr. Hassan (Shaike Levi) - Givat Halfon
+  var hassanImg = new Image();
+  hassanImg.crossOrigin = 'anonymous';
+  hassanImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/%D7%A9%D7%99%D7%A7%D7%94_%D7%A9%D7%99%D7%99%D7%A7%D7%94_%D7%9C%D7%95%D7%99_%D7%91%D7%94%D7%9C%D7%95%D7%95%D7%99%D7%AA%D7%95_%D7%A9%D7%9C_%D7%90%D7%A8%D7%99%D7%A7_%D7%90%D7%99%D7%99%D7%A0%D7%A9%D7%98%D7%99%D7%99%D7%9F_%28cropped%29.jpg/200px-%D7%A9%D7%99%D7%A7%D7%94_%D7%A9%D7%99%D7%99%D7%A7%D7%94_%D7%9C%D7%95%D7%99_%D7%91%D7%94%D7%9C%D7%95%D7%95%D7%99%D7%AA%D7%95_%D7%A9%D7%9C_%D7%90%D7%A8%D7%99%D7%A7_%D7%90%D7%99%D7%99%D7%A0%D7%A9%D7%98%D7%99%D7%99%D7%9F_%28cropped%29.jpg';
+  var hassanLoaded = false;
+  hassanImg.onload = function() { hassanLoaded = true; };
+
+  // Crambo (Rami Heuberger) - Mivtza Savta
+  var cramboImg = new Image();
+  cramboImg.crossOrigin = 'anonymous';
+  cramboImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Rami_Heuberger_%28cropped%29.jpg/200px-Rami_Heuberger_%28cropped%29.jpg';
+  var cramboLoaded = false;
+  cramboImg.onload = function() { cramboLoaded = true; };
+
 
 
   // ===== DEFENDER SYSTEM =====
   var defenders = [
     { id: 'lion', name: 'אריה כחול-לבן', nameEn: 'Blue-White Lion', desc: 'הלוחם המקורי - כוח ועוצמה', type: 'canvas' },
-    { id: 'golda', name: 'גולדה מאיר', nameEn: 'Golda Meir', desc: 'אם האומה - שריון נוסף בהתחלה', type: 'photo' },
+    { id: 'golda', name: 'גולדה מאיר', nameEn: 'Golda Meir', desc: 'אם האומה - שריון נוסף', type: 'photo' },
     { id: 'bengurion', name: 'דוד בן גוריון', nameEn: 'Ben-Gurion', desc: 'המייסד - בונוס ניקוד x1.5', type: 'photo' },
-    { id: 'idan', name: 'עידן עמדי', nameEn: 'Idan Amedi', desc: 'הלוחם הזמר - מהירות ירי גבוהה', type: 'photo' },
-    { id: 'lionphoto', name: 'אריה אמיתי', nameEn: 'Real Lion', desc: 'מלך החיות - נזק כפול', type: 'photo' }
+    { id: 'idan', name: 'עידן עמדי', nameEn: 'Idan Amedi', desc: 'הלוחם הזמר - ירי מהיר', type: 'photo' },
+    { id: 'lionphoto', name: 'אריה אמיתי', nameEn: 'Real Lion', desc: 'מלך החיות - נזק כפול', type: 'photo' },
+    { id: 'hassan', name: 'מר חסון', nameEn: 'Mr. Hassan', desc: 'גבעת חלפון - מגנט אוטומטי', type: 'photo' },
+    { id: 'crambo', name: 'קרמבו', nameEn: 'Crambo', desc: 'מבצע סבתא - מהירות תנועה x2', type: 'photo' }
   ];
   var selectedDefender = 'lion';
 
@@ -596,6 +615,8 @@
     if (id === 'bengurion') return { img: benGurionImg, loaded: benGurionLoaded };
     if (id === 'idan') return { img: idanImg, loaded: idanLoaded };
     if (id === 'lionphoto') return { img: lionPhotoImg, loaded: lionPhotoLoaded };
+    if (id === 'hassan') return { img: hassanImg, loaded: hassanLoaded };
+    if (id === 'crambo') return { img: cramboImg, loaded: cramboLoaded };
     return null;
   }
 
@@ -684,16 +705,42 @@
     ? '👆 לחץ להתחיל! | אגודל שמאל = ירי | אגודל ימין = תזוזה'
     : '← → ↑ ↓ לתזוזה  |  SPACE לירי  |  S למטוס חמקן';
 
-  // BG stars
-  var bgStars = [];
-  for (var i = 0; i < 80; i++) {
-    bgStars.push({ x: Math.random(), y: Math.random(), sz: Math.random() * 1.5 + 0.5, ph: Math.random() * 6.28, sp: 0.5 + Math.random() * 2 });
-  }
+  // ===== PARALLAX BACKGROUND LAYERS =====
+  var bgScroll = 0; // global scroll offset for forward motion
 
-  // Buildings
+  // Far stars (slow parallax - deep space)
+  var bgStarsFar = [];
+  for (var i = 0; i < 50; i++) {
+    bgStarsFar.push({ x: Math.random() * 2000, y: Math.random(), sz: Math.random() * 1.2 + 0.3, ph: Math.random() * 6.28, sp: 0.5 + Math.random() * 1.5 });
+  }
+  // Mid stars (medium parallax)
+  var bgStarsMid = [];
+  for (var i = 0; i < 40; i++) {
+    bgStarsMid.push({ x: Math.random() * 2000, y: Math.random() * 0.7, sz: Math.random() * 2 + 0.8, ph: Math.random() * 6.28, sp: 1 + Math.random() * 2 });
+  }
+  // Near nebula/cloud blobs
+  var bgClouds = [];
+  for (var i = 0; i < 12; i++) {
+    bgClouds.push({ x: Math.random() * 3000, y: 0.1 + Math.random() * 0.5, r: 30 + Math.random() * 60,
+      col: ['rgba(30,50,120,0.15)','rgba(80,20,80,0.12)','rgba(20,60,80,0.13)','rgba(60,30,60,0.1)'][Math.floor(Math.random()*4)] });
+  }
+  // Ground layer: scrolling terrain / buildings
+  var bgStars = bgStarsFar; // compat
   var bldgs = [];
-  for (var bx = 0; bx < 2000; bx += 30 + Math.random() * 20) {
-    bldgs.push({ x: bx, w: 20 + Math.random() * 18, h: 20 + Math.random() * 35 });
+  for (var bx = 0; bx < 3000; bx += 25 + Math.random() * 20) {
+    bldgs.push({ x: bx, w: 18 + Math.random() * 20, h: 15 + Math.random() * 40 });
+  }
+  // Ground detail: small lights on buildings
+  var bldgLights = [];
+  for (var i = 0; i < bldgs.length; i++) {
+    var b = bldgs[i];
+    for (var ly = 0; ly < b.h; ly += 8 + Math.random()*5) {
+      for (var lx = 0; lx < b.w; lx += 6 + Math.random()*4) {
+        if (Math.random() < 0.4) {
+          bldgLights.push({ bx: b.x + lx + 2, by: ly, col: Math.random() < 0.7 ? '#ffdd66' : '#aaccff' });
+        }
+      }
+    }
   }
 
   // Boss colors for each appearance
@@ -835,17 +882,29 @@
         var baseHp = r === 0 ? 2 : 1;
         var isSplitter = (wave >= 20 && r === 0 && Math.random() < 0.35);
         var isKamikaze = (wave >= 30 && r > 0 && Math.random() < 0.2);
+        // New enemy types for waves 10-20
+        var isShielded = (wave >= 10 && wave < 25 && Math.random() < 0.2);
+        var isZigzag = (wave >= 12 && Math.random() < 0.15);
+        var isTank = (wave >= 15 && r === 0 && Math.random() < 0.15);
+        var sz = isSplitter ? 22 : (isTank ? 24 : 18);
+        var hpMult = isSplitter ? 2 : (isTank ? 3 : (isShielded ? 1.5 : 1));
         enemies.push({
           x: sx + c * spX,
           y: sy + r * 46,
-          size: isSplitter ? 22 : 18,
-          hp: (baseHp + hpBonus) * (isSplitter ? 2 : 1),
-          maxHp: (baseHp + hpBonus) * (isSplitter ? 2 : 1),
+          size: sz,
+          hp: Math.ceil((baseHp + hpBonus) * hpMult),
+          maxHp: Math.ceil((baseHp + hpBonus) * hpMult),
           flash: 0,
           shootCD: 2000 + Math.random() * 4000,
           splitter: isSplitter,
           kamikaze: isKamikaze,
-          kamikazeActive: false
+          kamikazeActive: false,
+          // New types
+          shielded: isShielded,
+          shieldHP: isShielded ? 2 : 0,
+          zigzag: isZigzag,
+          zigzagPhase: Math.random() * 6.28,
+          tank: isTank
         });
       }
     }
@@ -910,7 +969,7 @@
   var shieldTimer = 0; // shield power-up: temporary invincibility
   function maybeSpawnPowerUp(x, y) {
     if (Math.random() > 0.14) return;
-    var types = ['fireRate', 'split2', 'split3', 'split4', 'explosive', 'piercing', 'electric'];
+    var types = ['fireRate', 'split2', 'split3', 'split4', 'explosive', 'piercing', 'electric', 'magnet'];
     // From wave 9+: add hearts and shields
     if (wave >= 9) {
       types.push('heart', 'heart', 'shield'); // hearts more common
@@ -919,8 +978,8 @@
       types.push('heart', 'shield'); // even more at nightmare
     }
     var t = types[Math.floor(Math.random() * types.length)];
-    var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff' };
-    var labels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '❤️', shield: '🛡️' };
+    var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
+    var labels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '❤\uFE0F', shield: '🛡\uFE0F', magnet: '🧲' };
     powerUps.push({ x: x, y: y, type: t, color: colors[t], label: labels[t], life: 8, vy: 0.8 });
   }
 
@@ -985,31 +1044,96 @@
 
   // ===== DRAW FUNCTIONS =====
   function drawBG() {
+    // Advance scroll for forward motion feeling
+    if (gameState === PLAYING || gameState === WAVE_INTRO || gameState === BOSS_INTRO) {
+      bgScroll += 0.8;
+    }
+
+    // Sky gradient - subtle color shift based on wave
     var grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#030810');
-    grad.addColorStop(0.7, '#0a1628');
-    grad.addColorStop(1, '#0d1b35');
+    var waveColor = wave < 6 ? 0 : Math.min((wave - 6) * 3, 40);
+    grad.addColorStop(0, 'rgb(' + (3+waveColor*0.3) + ',' + (8-waveColor*0.1) + ',' + (16+waveColor*0.2) + ')');
+    grad.addColorStop(0.5, 'rgb(' + (10+waveColor*0.2) + ',' + (22-waveColor*0.2) + ',' + (40+waveColor*0.3) + ')');
+    grad.addColorStop(1, 'rgb(' + (13+waveColor*0.1) + ',' + (27-waveColor*0.15) + ',' + (53+waveColor*0.2) + ')');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
     var now = performance.now() / 1000;
-    for (var i = 0; i < bgStars.length; i++) {
-      var s = bgStars[i];
-      ctx.globalAlpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(now * s.sp + s.ph));
-      ctx.fillStyle = '#fff';
+
+    // Layer 1: Far stars (slowest parallax)
+    var farOff = (bgScroll * 0.15) % 2000;
+    for (var i = 0; i < bgStarsFar.length; i++) {
+      var s = bgStarsFar[i];
+      var sx = ((s.x - farOff) % 2000 + 2000) % 2000;
+      sx = (sx / 2000) * W;
+      ctx.globalAlpha = 0.2 + 0.5 * (0.5 + 0.5 * Math.sin(now * s.sp + s.ph));
+      ctx.fillStyle = '#aabbee';
       ctx.beginPath();
-      ctx.arc(s.x * W, s.y * H * 0.75, s.sz, 0, 6.28);
+      ctx.arc(sx, s.y * H * 0.7, s.sz, 0, 6.28);
+      ctx.fill();
+    }
+
+    // Layer 2: Nebula clouds (slow parallax)
+    var cloudOff = (bgScroll * 0.25) % 3000;
+    for (var i = 0; i < bgClouds.length; i++) {
+      var c = bgClouds[i];
+      var cx = ((c.x - cloudOff) % 3000 + 3000) % 3000;
+      cx = (cx / 3000) * (W + 200) - 100;
+      ctx.globalAlpha = 0.6 + 0.3 * Math.sin(now * 0.3 + i);
+      ctx.fillStyle = c.col;
+      ctx.beginPath();
+      ctx.arc(cx, c.y * H, c.r, 0, 6.28);
+      ctx.fill();
+    }
+
+    // Layer 3: Mid stars (medium parallax)
+    var midOff = (bgScroll * 0.4) % 2000;
+    for (var i = 0; i < bgStarsMid.length; i++) {
+      var s = bgStarsMid[i];
+      var sx = ((s.x - midOff) % 2000 + 2000) % 2000;
+      sx = (sx / 2000) * W;
+      ctx.globalAlpha = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(now * s.sp + s.ph));
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(sx, s.y * H * 0.65, s.sz, 0, 6.28);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle = '#080f20';
-    ctx.fillRect(0, H - 35, W, 35);
+    // Layer 4: Ground (fastest parallax - closest)
+    var gndOff = (bgScroll * 1.2) % 3000;
+    ctx.fillStyle = '#060e22';
+    ctx.fillRect(0, H - 32, W, 32);
+
     for (var i = 0; i < bldgs.length; i++) {
       var b = bldgs[i];
-      if (b.x > W + 30) continue;
-      ctx.fillStyle = '#0b1530';
-      ctx.fillRect(b.x, H - 35 - b.h, b.w, b.h);
+      var bx = ((b.x - gndOff) % 3000 + 3000) % 3000;
+      bx = (bx / 3000) * (W + 100) - 50;
+      if (bx < -50 || bx > W + 50) continue;
+      ctx.fillStyle = '#0a1530';
+      ctx.fillRect(bx, H - 32 - b.h, b.w, b.h);
+    }
+    // Building window lights
+    for (var i = 0; i < bldgLights.length; i++) {
+      var l = bldgLights[i];
+      var lx = ((l.bx - gndOff) % 3000 + 3000) % 3000;
+      lx = (lx / 3000) * (W + 100) - 50;
+      if (lx < -5 || lx > W + 5) continue;
+      ctx.fillStyle = l.col;
+      ctx.globalAlpha = 0.4 + 0.3 * Math.sin(now * 2 + i * 0.7);
+      ctx.fillRect(lx, H - 32 - l.by, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // Scrolling ground line for speed feeling
+    ctx.strokeStyle = 'rgba(60,100,160,0.2)';
+    ctx.lineWidth = 1;
+    var lineOff = (bgScroll * 2) % 40;
+    for (var gx = -lineOff; gx < W + 40; gx += 40) {
+      ctx.beginPath();
+      ctx.moveTo(gx, H - 2);
+      ctx.lineTo(gx + 15, H - 2);
+      ctx.stroke();
     }
   }
 
@@ -1338,11 +1462,57 @@
       ctx.fillText('mini', e.x, e.y - e.size - 2);
       ctx.restore();
     }
+    // Shielded enemy: blue hexagon outline
+    if (e.shielded && e.shieldHP > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#44aaff';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.7 + Math.sin(performance.now() / 200) * 0.3;
+      ctx.beginPath();
+      for (var hi = 0; hi < 6; hi++) {
+        var ha = hi * Math.PI / 3 - Math.PI / 6;
+        var hx = e.x + Math.cos(ha) * (e.size + 6);
+        var hy = e.y + Math.sin(ha) * (e.size + 6);
+        if (hi === 0) ctx.moveTo(hx, hy); else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+    // Tank enemy: thick armor outline
+    if (e.tank) {
+      ctx.save();
+      ctx.strokeStyle = '#886633';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.rect(e.x - e.size * 0.6, e.y - e.size * 0.8, e.size * 1.2, e.size * 1.6);
+      ctx.stroke();
+      ctx.fillStyle = '#886633';
+      ctx.font = 'bold 7px ' + FONT_TITLE;
+      ctx.textAlign = 'center';
+      ctx.fillText('TANK', e.x, e.y - e.size - 4);
+      ctx.restore();
+    }
+    // Zigzag visual: wavy trail
+    if (e.zigzag) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,200,0,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var wi = 0; wi < 10; wi++) {
+        var wy = e.y + wi * 3;
+        var wx = e.x + Math.sin(e.zigzagPhase - wi * 0.5) * 4;
+        if (wi === 0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.save();
     var x = e.x, y = e.y, s = e.size;
     if (e.flash > 0) ctx.globalAlpha = 0.4 + Math.sin(performance.now() / 40) * 0.3;
 
-    ctx.fillStyle = '#4a5a3a';
+    ctx.fillStyle = e.tank ? '#556644' : '#4a5a3a';
     ctx.beginPath();
     ctx.ellipse(x, y, s * 0.26, s * 0.65, 0, 0, 6.28);
     ctx.fill();
@@ -1776,7 +1946,7 @@
     px += dx * PSPEED;
     py += dy * PSPEED;
     var minY = H * 0.3;
-    var maxY = H - (isMobile ? 170 : 50);
+    var maxY = H - (isMobile ? 60 : 50);
     px = Math.max(PW/2 + 5, Math.min(W - PW/2 - 5, px));
     py = Math.max(minY, Math.min(maxY, py));
 
@@ -1794,6 +1964,15 @@
       lastShot = now;
     }
 
+
+    // Zigzag enemies: sinusoidal side-to-side
+    for (var zi = 0; zi < enemies.length; zi++) {
+      var ze = enemies[zi];
+      if (ze.zigzag && !ze.kamikazeActive) {
+        ze.zigzagPhase += dt * 4;
+        ze.x += Math.sin(ze.zigzagPhase) * 1.8;
+      }
+    }
 
     // Kamikaze behavior: random enemies break formation and dive at player
     if (wave >= 30) {
@@ -1862,9 +2041,41 @@
       pu.y += pu.vy;
       pu.life -= dt;
       if (pu.life <= 0 || pu.y > H + 20) { powerUps.splice(i, 1); continue; }
+      // Magnet: attract power-ups toward player
+      if (hasMagnet && magnetTimer > 0) {
+        var mdx = px - pu.x, mdy = py - pu.y;
+        var mdist = Math.sqrt(mdx*mdx + mdy*mdy) || 1;
+        if (mdist < 300) {
+          pu.x += (mdx / mdist) * 5;
+          pu.y += (mdy / mdist) * 5;
+        }
+      }
       if (Math.abs(pu.x - px) < PW/2 + 12 && Math.abs(pu.y - py) < PH/2 + 12) {
         collectPowerUp(pu);
         powerUps.splice(i, 1);
+      }
+    }
+
+    // Magnet timer
+    if (magnetTimer > 0) {
+      magnetTimer -= dt;
+      if (magnetTimer <= 0) { hasMagnet = false; magnetTimer = 0; }
+    }
+
+    // Guaranteed power-up every 10 seconds
+    if (gameState === PLAYING) {
+      guaranteedPowerUpTimer += dt;
+      if (guaranteedPowerUpTimer >= 10) {
+        guaranteedPowerUpTimer = 0;
+        // Drop from random X at top of screen
+        var gpx = 50 + Math.random() * (W - 100);
+        var types_g = ['fireRate', 'split2', 'split3', 'explosive', 'piercing', 'electric', 'heart', 'shield', 'magnet'];
+        if (wave >= 9) types_g.push('heart', 'heart', 'shield');
+        var gt = types_g[Math.floor(Math.random() * types_g.length)];
+        var gcolors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
+        var glabels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '\u2764\uFE0F', shield: '\uD83D\uDEE1\uFE0F', magnet: '\uD83E\uDDF2' };
+        powerUps.push({ x: gpx, y: 20, type: gt, color: gcolors[gt], label: glabels[gt], life: 12, vy: 1.2 });
+        addFloat(gpx, 40, '\u2B07 POWER-UP!', '#ffd700');
       }
     }
 
@@ -2070,6 +2281,17 @@
           else if (b.ammoType === 2) dmg = 2;
           else if (b.ammoType === 3) dmg = 1;
 
+          // Shielded enemies: shield absorbs damage first
+          if (e.shielded && e.shieldHP > 0) {
+            e.shieldHP -= dmg;
+            e.flash = 0.15;
+            addP(e.x, e.y, '#44aaff', 5, 2);
+            if (e.shieldHP <= 0) {
+              e.shielded = false;
+              addFloat(e.x, e.y - 15, 'SHIELD DOWN!', '#44aaff');
+            }
+            playSfxHit();
+          } else {
           e.hp -= dmg;
           e.flash = 0.15;
           playSfxHit();
@@ -2099,7 +2321,11 @@
                   shootCD: 1500 + Math.random() * 2000,
                   splitter: false,
                   splitChild: true,
-                  kamikaze: false
+                  kamikaze: false,
+                  kamikazeActive: false,
+                  shielded: false, shieldHP: 0,
+                  zigzag: false, zigzagPhase: 0,
+                  tank: false
                 });
               }
               addFloat(e.x, e.y + 10, 'SPLIT!', '#ff44ff');
@@ -2121,6 +2347,7 @@
           } else {
             interceptFX(b.x, b.y);
           }
+          } // end shield else
           break;
         }
       }
@@ -2241,6 +2468,11 @@
       case 'explosive': ammoType = 1; break;
       case 'piercing': ammoType = 2; break;
       case 'electric': ammoType = 3; break;
+      case 'magnet':
+        hasMagnet = true; magnetTimer = 15;
+        addFloat(pu.x, pu.y - 30, 'MAGNET 15s!', '#ff66cc');
+        addP(pu.x, pu.y, '#ff66cc', 15, 3);
+        return;
     }
   }
 
@@ -2780,11 +3012,13 @@
     trumpTimer = 0;
     pBullets = []; enemies = []; eBullets = [];
     particles = []; floats = []; powerUps = [];
+    guaranteedPowerUpTimer = 0; hasMagnet = false; magnetTimer = 0; bgScroll = 0;
     comboCount = 0; comboTimer = 0;
     boss = null;
 
+    PSPEED = isMobile ? 6 : 4.5; // Reset speed
     px = W / 2;
-    py = H - (isMobile ? 190 : 80);
+    py = H - (isMobile ? 90 : 80);
     pInvincible = 0;
     currentRankIdx = 0;
 
@@ -2797,6 +3031,13 @@
     }
     if (selectedDefender === 'lionphoto') {
       ammoType = 1; // Starts with explosive ammo
+    }
+    if (selectedDefender === 'hassan') {
+      hasMagnet = true; magnetTimer = 999999; // Permanent magnet
+    }
+    if (selectedDefender === 'crambo') {
+      // "You start at your fastest pace and gradually you increase"
+      PSPEED = isMobile ? 10 : 7.5;
     }
 
     updateHUD();
@@ -2911,46 +3152,48 @@
   document.addEventListener('keyup', function(e) { keys[e.code] = false; });
 
   // Mobile controls
+  // Improved multi-touch: track each pointer independently
+  var _activePointers = {};
   function bindTouch(id, key) {
     var el = document.getElementById(id);
     if (!el) return;
+    el.style.touchAction = 'none';
 
-    function activate(e) {
+    el.addEventListener('pointerdown', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      el.setPointerCapture(e.pointerId);
+      _activePointers[e.pointerId] = key;
       if (key === 'stealth') { activateStealth(); return; }
       keys[key] = true;
       el.classList.add('active');
-    }
-    function deactivate(e) {
-      if (e) { e.preventDefault(); e.stopPropagation(); }
+    }, { passive: false });
+
+    el.addEventListener('pointerup', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      delete _activePointers[e.pointerId];
       if (key === 'stealth') return;
       keys[key] = false;
       el.classList.remove('active');
-    }
+    }, { passive: false });
 
-    el.addEventListener('touchstart', activate, { passive: false });
-    el.addEventListener('touchend', deactivate, { passive: false });
-    el.addEventListener('touchcancel', deactivate, { passive: false });
-    el.addEventListener('touchmove', function(e) {
+    el.addEventListener('pointercancel', function(e) {
+      delete _activePointers[e.pointerId];
+      if (key !== 'stealth') { keys[key] = false; el.classList.remove('active'); }
+    }, { passive: false });
+
+    el.addEventListener('pointermove', function(e) {
       e.preventDefault();
       if (key === 'stealth') return;
-      var touch = e.touches[0];
       var rect = el.getBoundingClientRect();
-      if (touch.clientX < rect.left - 30 || touch.clientX > rect.right + 30 ||
-          touch.clientY < rect.top - 30 || touch.clientY > rect.bottom + 30) {
+      if (e.clientX < rect.left - 40 || e.clientX > rect.right + 40 ||
+          e.clientY < rect.top - 40 || e.clientY > rect.bottom + 40) {
+        delete _activePointers[e.pointerId];
         keys[key] = false;
         el.classList.remove('active');
       }
     }, { passive: false });
-
-    el.addEventListener('mousedown', function(e) {
-      e.preventDefault();
-      if (key === 'stealth') { activateStealth(); return; }
-      keys[key] = true; el.classList.add('active');
-    });
-    el.addEventListener('mouseup', function(e) { e.preventDefault(); if (key !== 'stealth') { keys[key] = false; el.classList.remove('active'); } });
-    el.addEventListener('mouseleave', function(e) { if (key !== 'stealth') { keys[key] = false; el.classList.remove('active'); } });
   }
 
   bindTouch('btnLeft', 'mLeft');
