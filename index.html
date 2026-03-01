@@ -199,25 +199,49 @@
   .hud-value { color: #60a5fa; font-weight: 700; }
   .hud-lives { display: flex; gap: 2px; font-size: 0.85rem; }
 
+  /* ===== NEW MOBILE CONTROLS: dual-thumb layout ===== */
   #mobileControls {
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 60;
     display: none;
-    justify-content: center;
+    justify-content: space-between;
     align-items: flex-end;
-    gap: 10px;
-    padding: 10px;
+    padding: 10px 14px;
     padding-bottom: max(15px, env(safe-area-inset-bottom, 10px));
     background: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%);
     touch-action: none;
+    pointer-events: none;
   }
+
+  /* Left side: Fire + F-35 (stacked) */
+  .controls-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto;
+  }
+
+  /* Right side: D-pad */
+  .controls-right {
+    display: grid;
+    grid-template-areas:
+      ".    up   ."
+      "left .    right"
+      ".    down .";
+    grid-template-columns: 52px 52px 52px;
+    grid-template-rows: 52px 52px 52px;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
   .mobile-btn {
-    width: 60px; height: 60px;
+    width: 52px; height: 52px;
     border: 2px solid rgba(96,165,250,0.6);
     background: rgba(96,165,250,0.15);
     border-radius: 50%;
-    color: #fff; font-size: 1.5rem;
+    color: #fff; font-size: 1.4rem;
     display: flex; align-items: center; justify-content: center;
     touch-action: none;
     user-select: none;
@@ -233,12 +257,13 @@
     transform: scale(0.93);
   }
   .fire-btn {
-    width: 72px; height: 72px;
+    width: 80px; height: 80px;
     border-color: #ef4444;
     background: rgba(239,68,68,0.18);
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-family: 'Courier New', monospace;
     font-weight: 700;
+    border-radius: 50%;
   }
   .fire-btn.active, .fire-btn:active {
     background: rgba(239,68,68,0.5);
@@ -246,10 +271,10 @@
     transform: scale(0.93);
   }
   .stealth-btn {
-    width: 60px; height: 60px;
+    width: 58px; height: 58px;
     border-color: #ff3333;
     background: rgba(255,0,0,0.25);
-    font-size: 0.5rem;
+    font-size: 0.45rem;
     font-family: 'Courier New', monospace;
     font-weight: 700;
     color: #ff6666;
@@ -265,6 +290,11 @@
     border-color: #ff0000;
     transform: scale(0.93);
   }
+
+  #btnUp { grid-area: up; }
+  #btnDown { grid-area: down; }
+  #btnLeft { grid-area: left; }
+  #btnRight { grid-area: right; }
 
   @media (pointer: coarse), (max-width: 900px) {
     #mobileControls { display: flex; }
@@ -314,13 +344,18 @@
   <div class="hud-item"><span>KILLS</span><span class="hud-value" id="hudKills">0</span></div>
 </div>
 
+<!-- NEW LAYOUT: Fire on LEFT, D-pad on RIGHT -->
 <div id="mobileControls">
-  <button class="mobile-btn" id="btnUp" type="button">▲</button>
-  <button class="mobile-btn" id="btnLeft" type="button">◀</button>
-  <button class="mobile-btn fire-btn" id="btnFire" type="button">FIRE</button>
-  <button class="mobile-btn" id="btnRight" type="button">▶</button>
-  <button class="mobile-btn" id="btnDown" type="button">▼</button>
-  <button class="mobile-btn stealth-btn" id="btnStealth" type="button">F-35</button>
+  <div class="controls-left">
+    <button class="mobile-btn fire-btn" id="btnFire" type="button">FIRE<br>🔥</button>
+    <button class="mobile-btn stealth-btn" id="btnStealth" type="button">F-35</button>
+  </div>
+  <div class="controls-right">
+    <button class="mobile-btn" id="btnUp" type="button">▲</button>
+    <button class="mobile-btn" id="btnLeft" type="button">◀</button>
+    <button class="mobile-btn" id="btnRight" type="button">▶</button>
+    <button class="mobile-btn" id="btnDown" type="button">▼</button>
+  </div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
@@ -369,24 +404,21 @@
   var killsSinceLastStealth = 0;
   var stealthReady = false;
   var stealthActive = false;
-  var stealthPlane = null; // {x, y, phase}
+  var stealthPlane = null;
   var waveTimer = 0;
   var shakeX = 0, shakeY = 0, shakeDur = 0;
   var comboCount = 0, comboTimer = 0;
-  var lastExtraLife = 0; // track when last extra life was given
+  var lastExtraLife = 0;
 
   // Power-ups
   var fireRateMultiplier = 1;
-  var shotStreams = 1; // 1,2,3,4
-  var ammoType = 0; // 0=normal, 1=explosive, 2=piercing, 3=electric
+  var shotStreams = 1;
+  var ammoType = 0;
   var ammoNames = ['NORMAL', 'EXPLOSIVE', 'PIERCING', 'ELECTRIC'];
   var ammoColors = ['#60a5fa', '#ff8844', '#22ff88', '#aa66ff'];
-  var powerUpTimer = 0; // time remaining for active power-up
+  var powerUpTimer = 0;
 
-  // Active powerups on field
   var powerUps = [];
-
-  // Trump animation
   var trumpTimer = 0;
 
   var pBullets = [];
@@ -409,7 +441,7 @@
   var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
   document.getElementById('instrText').textContent = isMobile
-    ? 'השתמש בכפתורים למטה לשליטה 🛡️'
+    ? 'אגודל שמאל = ירי | אגודל ימין = תזוזה 🛡️'
     : '← → ↑ ↓ לתזוזה  |  SPACE לירי  |  S למטוס חמקן';
 
   // BG stars
@@ -490,7 +522,7 @@
     var totW = (cols - 1) * spX;
     var sx = (W - totW) / 2;
     var sy = 65;
-    var hpBonus = Math.floor(wave / 3); // missiles get tougher
+    var hpBonus = Math.floor(wave / 3);
 
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
@@ -513,7 +545,7 @@
 
   // ===== SPAWN BOSS =====
   function spawnBoss() {
-    var bossNum = Math.floor(wave / 3); // which boss appearance (1st, 2nd, 3rd...)
+    var bossNum = Math.floor(wave / 3);
     var baseHP = 30;
     var extraHP = (bossNum - 1) * 10;
     var col = bossColors[(bossNum - 1) % bossColors.length];
@@ -528,18 +560,19 @@
       color: col,
       flash: 0,
       shootTimer: 0,
-      shootPhase: 0, // 0=shooting, 1=pause
+      shootPhase: 0,
       burstCount: 0,
       pauseTimer: 0,
       moveDir: 1,
       moveTimer: 0,
+      bossNum: bossNum,
       label: 'BOSS #' + bossNum
     };
   }
 
   // ===== SPAWN POWERUP =====
   function maybeSpawnPowerUp(x, y) {
-    if (Math.random() > 0.12) return; // 12% chance
+    if (Math.random() > 0.12) return;
     var types = ['fireRate', 'split2', 'split3', 'split4', 'explosive', 'piercing', 'electric'];
     var t = types[Math.floor(Math.random() * types.length)];
     var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff' };
@@ -715,12 +748,12 @@
     ctx.fillStyle = '#fff';
     ctx.fillRect(b.x - 2, b.y - 4, 4, 8);
 
-    if (b.ammoType === 1) { // explosive - bigger
+    if (b.ammoType === 1) {
       ctx.fillStyle = '#ff8844';
       ctx.beginPath();
       ctx.arc(b.x, b.y - 4, 4, 0, 6.28);
       ctx.fill();
-    } else if (b.ammoType === 3) { // electric - zigzag
+    } else if (b.ammoType === 3) {
       ctx.strokeStyle = '#aa66ff';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -793,7 +826,6 @@
       ctx.fill();
     }
 
-    // HP indicator for tough enemies
     if (e.maxHp > 1) {
       var hpRatio = e.hp / e.maxHp;
       var bw = s * 0.8;
@@ -806,6 +838,7 @@
     ctx.restore();
   }
 
+  // ===== DRAW BOSS - Khamenei in spaceship =====
   function drawBoss() {
     if (!boss) return;
     ctx.save();
@@ -814,78 +847,187 @@
 
     if (b.flash > 0) ctx.globalAlpha = 0.5 + Math.sin(performance.now() / 30) * 0.3;
 
-    // Spaceship body
+    // === Spaceship body ===
     ctx.fillStyle = b.color;
     ctx.beginPath();
-    ctx.ellipse(x, y, s * 1.2, s * 0.6, 0, 0, 6.28);
+    ctx.ellipse(x, y, s * 1.3, s * 0.65, 0, 0, 6.28);
     ctx.fill();
 
-    // Dome
-    ctx.fillStyle = '#334';
+    // Spaceship rim/edge detail
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(x, y - s * 0.2, s * 0.5, s * 0.5, 0, Math.PI, 0);
-    ctx.fill();
-
-    // Turban/head in dome
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(x, y - s * 0.45, s * 0.25, 0, 6.28);
-    ctx.fill();
-    // White turban
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.ellipse(x, y - s * 0.6, s * 0.3, s * 0.15, 0, 0, 6.28);
-    ctx.fill();
-    // Beard
-    ctx.fillStyle = '#555';
-    ctx.beginPath();
-    ctx.ellipse(x, y - s * 0.25, s * 0.15, s * 0.2, 0, 0, Math.PI);
-    ctx.fill();
-    // Eyes
-    ctx.fillStyle = '#ff0000';
-    ctx.beginPath();
-    ctx.arc(x - s*0.1, y - s*0.45, 2, 0, 6.28);
-    ctx.arc(x + s*0.1, y - s*0.45, 2, 0, 6.28);
-    ctx.fill();
+    ctx.ellipse(x, y, s * 1.3, s * 0.65, 0, 0, 6.28);
+    ctx.stroke();
 
     // Wings
     ctx.fillStyle = b.color;
     ctx.beginPath();
     ctx.moveTo(x - s, y);
-    ctx.lineTo(x - s * 1.6, y + s * 0.3);
+    ctx.lineTo(x - s * 1.8, y + s * 0.35);
     ctx.lineTo(x - s * 0.8, y + s * 0.1);
     ctx.closePath();
     ctx.fill();
     ctx.beginPath();
     ctx.moveTo(x + s, y);
-    ctx.lineTo(x + s * 1.6, y + s * 0.3);
+    ctx.lineTo(x + s * 1.8, y + s * 0.35);
     ctx.lineTo(x + s * 0.8, y + s * 0.1);
     ctx.closePath();
     ctx.fill();
 
-    // Engine glow
-    var glow = ctx.createRadialGradient(x, y + s*0.5, 0, x, y + s*0.5, s*0.4);
+    // === Glass dome ===
+    var domeGrad = ctx.createRadialGradient(x, y - s*0.35, 0, x, y - s*0.2, s * 0.6);
+    domeGrad.addColorStop(0, 'rgba(100,140,200,0.15)');
+    domeGrad.addColorStop(0.7, 'rgba(60,80,120,0.3)');
+    domeGrad.addColorStop(1, 'rgba(40,60,100,0.5)');
+    ctx.fillStyle = domeGrad;
+    ctx.beginPath();
+    ctx.ellipse(x, y - s * 0.15, s * 0.55, s * 0.6, 0, Math.PI, 0);
+    ctx.fill();
+    // Dome shine
+    ctx.strokeStyle = 'rgba(150,200,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(x, y - s * 0.15, s * 0.55, s * 0.6, 0, Math.PI + 0.3, -0.3);
+    ctx.stroke();
+
+    // === CHARACTER: Khamenei ===
+    var headY = y - s * 0.35;
+    var headR = s * 0.22;
+
+    // Face (skin tone)
+    ctx.fillStyle = '#e8c8a0';
+    ctx.beginPath();
+    ctx.arc(x, headY, headR, 0, 6.28);
+    ctx.fill();
+
+    // === BLACK TURBAN ===
+    // Main turban wrap - round on top
+    ctx.fillStyle = '#111111';
+    ctx.beginPath();
+    ctx.ellipse(x, headY - headR * 0.55, headR * 1.1, headR * 0.7, 0, 0, 6.28);
+    ctx.fill();
+    // Turban top dome
+    ctx.beginPath();
+    ctx.ellipse(x, headY - headR * 0.9, headR * 0.85, headR * 0.45, 0, 0, 6.28);
+    ctx.fill();
+    // Turban front band across forehead
+    ctx.fillRect(x - headR * 0.95, headY - headR * 0.55, headR * 1.9, headR * 0.3);
+
+    // === GLASSES ===
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1.2;
+    // Left lens
+    ctx.beginPath();
+    ctx.ellipse(x - headR * 0.35, headY - headR * 0.05, headR * 0.22, headR * 0.18, 0, 0, 6.28);
+    ctx.stroke();
+    // Right lens
+    ctx.beginPath();
+    ctx.ellipse(x + headR * 0.35, headY - headR * 0.05, headR * 0.22, headR * 0.18, 0, 0, 6.28);
+    ctx.stroke();
+    // Bridge
+    ctx.beginPath();
+    ctx.moveTo(x - headR * 0.13, headY - headR * 0.05);
+    ctx.lineTo(x + headR * 0.13, headY - headR * 0.05);
+    ctx.stroke();
+    // Lens tint
+    ctx.fillStyle = 'rgba(100,100,100,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(x - headR * 0.35, headY - headR * 0.05, headR * 0.2, headR * 0.16, 0, 0, 6.28);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + headR * 0.35, headY - headR * 0.05, headR * 0.2, headR * 0.16, 0, 0, 6.28);
+    ctx.fill();
+
+    // === EYES (behind glasses) ===
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(x - headR * 0.35, headY - headR * 0.05, 1.5, 0, 6.28);
+    ctx.arc(x + headR * 0.35, headY - headR * 0.05, 1.5, 0, 6.28);
+    ctx.fill();
+
+    // === EYEBROWS (thick, grey) ===
+    ctx.strokeStyle = '#777';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - headR * 0.55, headY - headR * 0.25);
+    ctx.quadraticCurveTo(x - headR * 0.35, headY - headR * 0.35, x - headR * 0.15, headY - headR * 0.25);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + headR * 0.15, headY - headR * 0.25);
+    ctx.quadraticCurveTo(x + headR * 0.35, headY - headR * 0.35, x + headR * 0.55, headY - headR * 0.25);
+    ctx.stroke();
+
+    // === NOSE ===
+    ctx.strokeStyle = '#c0a080';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, headY - headR * 0.05);
+    ctx.lineTo(x - headR * 0.08, headY + headR * 0.2);
+    ctx.lineTo(x + headR * 0.05, headY + headR * 0.2);
+    ctx.stroke();
+
+    // === LONG WHITE BEARD ===
+    // Main beard shape - full and long
+    ctx.fillStyle = '#e8e8e8';
+    ctx.beginPath();
+    ctx.moveTo(x - headR * 0.7, headY + headR * 0.2);
+    // Left side
+    ctx.quadraticCurveTo(x - headR * 0.9, headY + headR * 1.0, x - headR * 0.5, headY + headR * 2.2);
+    // Bottom curve
+    ctx.quadraticCurveTo(x, headY + headR * 2.8, x + headR * 0.5, headY + headR * 2.2);
+    // Right side
+    ctx.quadraticCurveTo(x + headR * 0.9, headY + headR * 1.0, x + headR * 0.7, headY + headR * 0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Beard texture lines
+    ctx.strokeStyle = 'rgba(200,200,200,0.5)';
+    ctx.lineWidth = 0.5;
+    for (var bi = -3; bi <= 3; bi++) {
+      ctx.beginPath();
+      ctx.moveTo(x + bi * headR * 0.15, headY + headR * 0.4);
+      ctx.quadraticCurveTo(x + bi * headR * 0.18, headY + headR * 1.5, x + bi * headR * 0.12, headY + headR * 2.3);
+      ctx.stroke();
+    }
+
+    // Mustache
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath();
+    ctx.ellipse(x, headY + headR * 0.3, headR * 0.5, headR * 0.12, 0, 0, Math.PI);
+    ctx.fill();
+
+    // === Small frown/mouth line ===
+    ctx.strokeStyle = '#c0a080';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x - headR * 0.15, headY + headR * 0.35);
+    ctx.lineTo(x + headR * 0.15, headY + headR * 0.35);
+    ctx.stroke();
+
+    // Engine glow under ship
+    var glow = ctx.createRadialGradient(x, y + s*0.55, 0, x, y + s*0.55, s*0.5);
     glow.addColorStop(0, 'rgba(255,100,0,0.6)');
     glow.addColorStop(1, 'rgba(255,0,0,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y + s*0.5, s*0.4, 0, 6.28);
+    ctx.arc(x, y + s*0.55, s*0.5, 0, 6.28);
     ctx.fill();
 
-    // HP bar
+    // === HP bar ===
     var hpRatio = b.hp / b.maxHp;
-    var barW = s * 2;
+    var barW = s * 2.2;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(x - barW/2, y - s - 12, barW, 6);
+    ctx.fillRect(x - barW/2, y - s - 18, barW, 6);
     ctx.fillStyle = hpRatio > 0.3 ? '#ff4444' : '#ffff00';
-    ctx.fillRect(x - barW/2, y - s - 12, barW * hpRatio, 6);
+    ctx.fillRect(x - barW/2, y - s - 18, barW * hpRatio, 6);
 
     // Label
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 10px ' + FONT_TITLE;
     ctx.textAlign = 'center';
-    ctx.fillText(b.label, x, y - s - 16);
-    ctx.fillText(b.hp + '/' + b.maxHp, x, y - s - 4);
+    ctx.fillText(b.label, x, y - s - 22);
+    ctx.fillText(b.hp + '/' + b.maxHp, x, y - s - 10);
 
     ctx.restore();
   }
@@ -896,9 +1038,7 @@
     var sp = stealthPlane;
     var x = sp.x, y = sp.y;
 
-    // F-35 style stealth
     ctx.fillStyle = '#333';
-    // Body
     ctx.beginPath();
     ctx.moveTo(x + 40, y);
     ctx.lineTo(x - 20, y - 8);
@@ -906,7 +1046,6 @@
     ctx.lineTo(x - 20, y + 8);
     ctx.closePath();
     ctx.fill();
-    // Wings
     ctx.beginPath();
     ctx.moveTo(x, y - 5);
     ctx.lineTo(x - 15, y - 25);
@@ -921,12 +1060,10 @@
     ctx.lineTo(x - 10, y);
     ctx.closePath();
     ctx.fill();
-    // US star
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 8px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('★', x - 5, y + 3);
-    // Trail
     var tg = ctx.createLinearGradient(x - 30, y, x - 80, y);
     tg.addColorStop(0, 'rgba(100,150,255,0.5)');
     tg.addColorStop(1, 'rgba(100,150,255,0)');
@@ -941,7 +1078,6 @@
       var p = powerUps[i];
       ctx.save();
       ctx.globalAlpha = Math.min(1, p.life);
-      // Glowing circle
       var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 14);
       glow.addColorStop(0, p.color);
       glow.addColorStop(1, p.color + '00');
@@ -949,12 +1085,10 @@
       ctx.beginPath();
       ctx.arc(p.x, p.y, 14, 0, 6.28);
       ctx.fill();
-      // Inner
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 8, 0, 6.28);
       ctx.fill();
-      // Label
       ctx.fillStyle = '#000';
       ctx.font = 'bold 7px ' + FONT_TITLE;
       ctx.textAlign = 'center';
@@ -972,38 +1106,31 @@
 
     var cx = W / 2, cy = H / 2;
 
-    // Big circle background
     ctx.fillStyle = 'rgba(255,215,0,0.3)';
     ctx.beginPath();
     ctx.arc(cx, cy, 80, 0, 6.28);
     ctx.fill();
 
-    // Head
     ctx.fillStyle = '#ffcc88';
     ctx.beginPath();
     ctx.arc(cx, cy - 15, 30, 0, 6.28);
     ctx.fill();
-    // Hair
     ctx.fillStyle = '#ffdd44';
     ctx.beginPath();
     ctx.ellipse(cx, cy - 40, 32, 15, 0, 0, Math.PI);
     ctx.fill();
-    // Eyes
     ctx.fillStyle = '#3388ff';
     ctx.beginPath();
     ctx.arc(cx - 10, cy - 18, 3, 0, 6.28);
     ctx.arc(cx + 10, cy - 18, 3, 0, 6.28);
     ctx.fill();
-    // Smile
     ctx.strokeStyle = '#cc4444';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(cx, cy - 8, 12, 0.2, Math.PI - 0.2);
     ctx.stroke();
-    // Suit
     ctx.fillStyle = '#222';
     ctx.fillRect(cx - 25, cy + 15, 50, 35);
-    // Tie
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.moveTo(cx, cy + 15);
@@ -1011,18 +1138,15 @@
     ctx.lineTo(cx + 6, cy + 40);
     ctx.closePath();
     ctx.fill();
-    // Thumbs up hand
     ctx.fillStyle = '#ffcc88';
     ctx.beginPath();
     ctx.ellipse(cx + 40, cy, 8, 12, -0.3, 0, 6.28);
     ctx.fill();
-    // Thumb
     ctx.fillStyle = '#ffcc88';
     ctx.beginPath();
     ctx.ellipse(cx + 42, cy - 18, 5, 10, 0, 0, 6.28);
     ctx.fill();
 
-    // Text
     ctx.fillStyle = '#ffd700';
     ctx.font = '900 24px ' + FONT_TITLE;
     ctx.textAlign = 'center';
@@ -1075,7 +1199,6 @@
     }
   }
 
-  // Stealth bar indicator (desktop)
   function drawStealthIndicator() {
     if (gameState !== PLAYING) return;
     var barW = 80, barH = 8;
@@ -1094,7 +1217,6 @@
     ctx.restore();
   }
 
-  // Active powerup indicator
   function drawPowerUpIndicator() {
     if (powerUpTimer <= 0 && shotStreams === 1 && ammoType === 0 && fireRateMultiplier === 1) return;
     ctx.save();
@@ -1138,7 +1260,6 @@
       waveTimer -= dt;
       if (waveTimer <= 0) {
         gameState = PLAYING;
-        // Check if boss wave
         if (wave % 3 === 0) {
           spawnBoss();
         } else {
@@ -1169,7 +1290,7 @@
       }
     }
 
-    // Player movement - now supports up/down too
+    // Player movement
     var dx = 0, dy = 0;
     if (keys['ArrowLeft'] || keys['KeyA'] || keys['mLeft']) dx = -1;
     if (keys['ArrowRight'] || keys['KeyD'] || keys['mRight']) dx = 1;
@@ -1178,7 +1299,7 @@
     px += dx * PSPEED;
     py += dy * PSPEED;
     var minY = H * 0.4;
-    var maxY = H - (isMobile ? 130 : 60);
+    var maxY = H - (isMobile ? 180 : 60);
     px = Math.max(PW/2 + 5, Math.min(W - PW/2 - 5, px));
     py = Math.max(minY, Math.min(maxY, py));
 
@@ -1199,9 +1320,7 @@
     // Update stealth plane
     if (stealthPlane) {
       stealthPlane.x += 8;
-      // Destroy all enemies as it passes
       if (stealthPlane.phase === 0) {
-        // damage everything in its path
         for (var i = enemies.length - 1; i >= 0; i--) {
           var e = enemies[i];
           if (Math.abs(e.x - stealthPlane.x) < 60) {
@@ -1215,7 +1334,6 @@
             }
           }
         }
-        // Also hit boss
         if (boss && Math.abs(boss.x - stealthPlane.x) < 80) {
           boss.hp -= 20;
           boss.flash = 0.3;
@@ -1225,7 +1343,6 @@
             defeatBoss();
           }
         }
-        // Clear enemy bullets nearby
         for (var i = eBullets.length - 1; i >= 0; i--) {
           if (Math.abs(eBullets[i].x - stealthPlane.x) < 80 && Math.abs(eBullets[i].y - stealthPlane.y) < 100) {
             eBullets.splice(i, 1);
@@ -1252,7 +1369,6 @@
       pu.y += pu.vy;
       pu.life -= dt;
       if (pu.life <= 0 || pu.y > H + 20) { powerUps.splice(i, 1); continue; }
-      // Collect
       if (Math.abs(pu.x - px) < PW/2 + 12 && Math.abs(pu.y - py) < PH/2 + 12) {
         collectPowerUp(pu);
         powerUps.splice(i, 1);
@@ -1261,21 +1377,17 @@
 
     // BOSS UPDATE
     if (boss) {
-      // Move into position
       if (boss.y < boss.targetY) {
         boss.y += 1.5;
       } else {
-        // Move side to side
         boss.moveTimer += dt;
         boss.x += Math.sin(boss.moveTimer * 1.5) * 2;
 
-        // Boss shooting: 5 streams with pauses
         if (boss.flash > 0) boss.flash -= dt;
 
         if (boss.shootPhase === 0) {
           boss.shootTimer -= dt;
           if (boss.shootTimer <= 0) {
-            // Fire 5 streams
             for (var s = -2; s <= 2; s++) {
               eBullets.push({
                 x: boss.x + s * 15,
@@ -1309,16 +1421,16 @@
         var dx2 = b.x - boss.x, dy2 = b.y - boss.y;
         if (dx2*dx2 + dy2*dy2 < (boss.size+10)*(boss.size+10)) {
           var dmg = 1;
-          if (b.ammoType === 1) { dmg = 3; boom(b.x, b.y); } // explosive
-          else if (b.ammoType === 2) dmg = 2; // piercing
-          else if (b.ammoType === 3) { dmg = 1; addP(b.x, b.y, '#aa66ff', 5, 2); } // electric chain
+          if (b.ammoType === 1) { dmg = 3; boom(b.x, b.y); }
+          else if (b.ammoType === 2) dmg = 2;
+          else if (b.ammoType === 3) { dmg = 1; addP(b.x, b.y, '#aa66ff', 5, 2); }
 
           boss.hp -= dmg;
           boss.flash = 0.1;
           interceptFX(b.x, b.y);
           addFloat(b.x, b.y - 10, '-' + dmg, '#ff8844');
 
-          if (b.ammoType !== 2) { // piercing goes through
+          if (b.ammoType !== 2) {
             pBullets.splice(bi, 1);
           }
 
@@ -1343,7 +1455,6 @@
         for (var i = 0; i < enemies.length; i++) enemies[i].y += 10;
       }
 
-      // Enemy shooting - scales with wave
       for (var i = 0; i < enemies.length; i++) {
         var e = enemies[i];
         e.shootCD -= dt * 1000;
@@ -1393,14 +1504,12 @@
             maybeSpawnPowerUp(e.x, e.y);
             enemies.splice(ei, 1);
 
-            // Check stealth
             if (killsSinceLastStealth >= 30 && !stealthReady) {
               stealthReady = true;
               addFloat(W/2, H/2, 'F-35 READY!', '#ff0000');
             }
             updateStealthBtn();
 
-            // Check 100 kills milestone for extra life
             if (totalKills > 0 && totalKills % 100 === 0 && totalKills !== lastExtraLife) {
               lastExtraLife = totalKills;
               lives++;
@@ -1437,7 +1546,7 @@
       }
     }
 
-    // Wave complete (no boss)
+    // Wave complete
     if (!boss && enemies.length === 0 && gameState === PLAYING) {
       wave++;
       score += wave * 50;
@@ -1457,7 +1566,6 @@
     addFloat(boss.x, boss.y, 'BOSS DEFEATED!', '#ffd700');
     addFloat(boss.x, boss.y + 30, '+' + (boss.maxHp * 20), '#fbbf24');
 
-    // Check stealth
     if (killsSinceLastStealth >= 30 && !stealthReady) {
       stealthReady = true;
       addFloat(W/2, H/2 + 60, 'F-35 READY!', '#ff0000');
@@ -1491,7 +1599,7 @@
   }
 
   function collectPowerUp(pu) {
-    powerUpTimer = 12; // 12 seconds
+    powerUpTimer = 12;
     addFloat(pu.x, pu.y - 15, pu.label + '!', pu.color);
 
     switch (pu.type) {
@@ -1575,7 +1683,7 @@
     boss = null;
 
     px = W / 2;
-    py = H - (isMobile ? 140 : 80);
+    py = H - (isMobile ? 200 : 80);
     pInvincible = 0;
 
     updateHUD();
@@ -1626,7 +1734,6 @@
       ctx.globalAlpha = Math.max(0, Math.min(1, a));
 
       if (wave % 3 === 0) {
-        // Boss incoming!
         ctx.fillStyle = '#ff4444';
         ctx.font = '900 38px ' + FONT_TITLE;
         ctx.textAlign = 'center';
@@ -1659,7 +1766,6 @@
   // ===== INPUT HANDLING =====
   document.addEventListener('keydown', function(e) {
     if (e.code === 'KeyS' && !e.repeat) {
-      // S key for stealth (not movement)
       keys['KeyS'] = true;
     } else if (e.code === 'ArrowDown' || e.code === 'KeyW' || e.code === 'ArrowUp') {
       keys[e.code] = true;
