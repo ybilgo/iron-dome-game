@@ -485,7 +485,8 @@
 
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
-  var PW = 60, PH = 52, PSPEED = isMobile ? 6 : 4.5;
+  var DESKTOP_SCALE = isMobile ? 1.0 : 1.35;
+  var PW = Math.round(60 * DESKTOP_SCALE), PH = Math.round(52 * DESKTOP_SCALE), PSPEED = isMobile ? 6 : 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
   var FONT_HEB = "Arial, sans-serif";
@@ -1356,7 +1357,7 @@
 
   function drawPhotoDefender(defInfo) {
     var x = px, y = py;
-    var s = 1;
+    var s = DESKTOP_SCALE;
     // Platform / vehicle
     ctx.fillStyle = '#0038b8';
     ctx.beginPath();
@@ -1419,16 +1420,17 @@
 
     // Shield glow when invincible
     if (shieldTimer > 0) {
-      var sg = ctx.createRadialGradient(px, py, 10, px, py, 42);
+      var shR = 42 * DESKTOP_SCALE;
+      var sg = ctx.createRadialGradient(px, py, 10, px, py, shR);
       sg.addColorStop(0, 'rgba(68,221,255,0.0)');
       sg.addColorStop(0.6, 'rgba(68,221,255,0.2)');
       sg.addColorStop(1, 'rgba(68,221,255,0.0)');
       ctx.fillStyle = sg;
-      ctx.beginPath(); ctx.arc(px, py, 42, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, shR, 0, 6.28); ctx.fill();
     }
 
     // === LION (Blue-White Israeli uniform) ===
-    var s = 1.0;
+    var s = DESKTOP_SCALE;
 
     // === Body - white with blue vest ===
     ctx.fillStyle = '#ffffff';
@@ -2675,7 +2677,7 @@
   function hitPlayer() {
     if (gameState === GAMEOVER) return; // Already dead
     playerHP--;
-    pInvincible = 1.5;
+    pInvincible = 0.7;
     shakeDur = 10;
     addP(px, py, '#ff4444', 12, 3);
 
@@ -2685,7 +2687,7 @@
         doGameOver();
       } else {
         playerHP = maxPlayerHP;
-        pInvincible = 3;
+        pInvincible = 1.5;
         addFloat(px, py - 30, 'LIFE LOST!', '#ff4444');
       }
     }
