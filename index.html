@@ -317,12 +317,13 @@
   .char-card {
     background: rgba(30,40,80,0.7);
     border: 2px solid rgba(96,165,250,0.3);
-    border-radius: 12px;
-    padding: 10px 6px;
+    border-radius: 8px;
+    padding: 6px 3px;
     cursor: pointer;
     transition: all 0.2s;
     text-align: center;
     touch-action: manipulation;
+    min-width: 0;
   }
   .char-card:hover, .char-card.selected {
     border-color: #60a5fa;
@@ -331,7 +332,7 @@
     box-shadow: 0 0 20px rgba(96,165,250,0.4);
   }
   .char-card img {
-    width: 64px; height: 64px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid rgba(255,255,255,0.3);
@@ -353,8 +354,8 @@
   }
   .char-start-btn {
     display: inline-block;
-    margin-top: 12px;
-    padding: 12px 40px;
+    margin-top: 6px;
+    padding: 8px 24px;
     background: linear-gradient(135deg, #0038b8, #0050d0);
     color: #fff;
     border: 2px solid #60a5fa;
@@ -387,20 +388,20 @@
   </div>
 </div>
 
-<div class="overlay hidden" id="charSelectScreen" style="overflow-y:auto;padding:20px 10px;">
-  <div class="hebrew-title" style="font-size:clamp(1.2rem,4vw,1.8rem)">🦁 בחר את הלוחם שלך 🦁</div>
-  <div class="title" style="font-size:clamp(1rem,3vw,1.5rem)">CHOOSE YOUR DEFENDER</div>
-  <div id="charGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;max-width:600px;margin:15px auto;direction:ltr;"></div>
-  <div id="charName" style="color:#60a5fa;font-size:clamp(1rem,3vw,1.3rem);font-weight:900;margin:8px 0;font-family:'Courier New',monospace;"></div>
-  <div id="charDesc" style="color:#aaa;font-size:clamp(0.7rem,2vw,0.85rem);font-family:Arial,sans-serif;max-width:400px;margin:0 auto;"></div>
-  <div id="highScoreDisplay" style="margin:12px auto;max-width:400px;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
+<div class="overlay hidden" id="charSelectScreen" style="padding:8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+  <div class="hebrew-title" style="font-size:clamp(0.9rem,3vw,1.2rem)">🦁 בחר את הלוחם שלך 🦁</div>
+  <div class="title" style="font-size:clamp(0.75rem,2vw,1rem)">CHOOSE YOUR DEFENDER</div>
+  <div id="charGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:min(95vw,420px);margin:8px auto;direction:ltr;"></div>
+  <div id="charName" style="color:#60a5fa;font-size:clamp(0.8rem,2.5vw,1rem);font-weight:900;margin:4px 0;font-family:'Courier New',monospace;"></div>
+  <div id="charDesc" style="color:#aaa;font-size:clamp(0.6rem,1.5vw,0.75rem);font-family:Arial,sans-serif;max-width:400px;margin:0 auto;"></div>
+  <div id="highScoreDisplay" style="margin:4px auto;max-width:min(95vw,380px);max-height:12vh;overflow-y:auto;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
 </div>
 
-<div class="overlay hidden" id="citySelectScreen" style="overflow-y:auto;padding:20px 10px;">
-  <div class="hebrew-title" style="font-size:clamp(1.2rem,4vw,1.8rem)">\u{1F30D} \u05D1\u05D7\u05E8 \u05E8\u05E7\u05E2 \u{1F30D}</div>
-  <div class="title" style="font-size:clamp(1rem,3vw,1.5rem)">CHOOSE BATTLEFIELD</div>
-  <div id="cityGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;max-width:600px;margin:15px auto;direction:ltr;"></div>
-  <div id="cityHighScoreDisplay" style="margin:12px auto;max-width:400px;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
+<div class="overlay hidden" id="citySelectScreen" style="padding:8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+  <div class="hebrew-title" style="font-size:clamp(0.9rem,3vw,1.2rem)">🌍 בחר רקע 🌍</div>
+  <div class="title" style="font-size:clamp(0.75rem,2vw,1rem)">CHOOSE BATTLEFIELD</div>
+  <div id="cityGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:min(95vw,380px);margin:8px auto;direction:ltr;"></div>
+  <div id="cityHighScoreDisplay" style="margin:4px auto;max-width:min(95vw,380px);max-height:10vh;overflow-y:auto;color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.65rem,1.8vw,0.8rem);text-align:center;"></div>
 </div>
 
 <div class="overlay hidden" id="countdownScreen">
@@ -415,6 +416,7 @@
   <div class="subtitle" id="finalWave" style="font-size:clamp(1rem,3vw,1.2rem)">גל 1</div>
   <div class="motto" id="endMessage">עם ישראל חי!</div>
   <div id="goHighScore" style="color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.8rem,2.5vw,1rem);margin:8px 0;"></div>
+  <div id="goScoreList" style="color:#fbbf24;font-family:'Courier New',monospace;font-size:clamp(0.7rem,2vw,0.85rem);margin:4px 0;max-height:30vh;overflow-y:auto;"></div>
   <div class="tap-hint" id="tapHint" style="display:none">TAP TO PLAY AGAIN<br><span style="font-family:Arial,sans-serif;font-size:0.85em">לחץ כדי לשחק שוב</span></div>
 </div>
 
@@ -597,6 +599,12 @@
   hassanImg.onload = function() { hassanLoaded = true; };
 
   // Crambo (Rami Heuberger) - Mivtza Savta
+  var peninaImg = new Image();
+  var peninaLoaded = false;
+  peninaImg.crossOrigin = 'anonymous';
+  peninaImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Penina_Rosenblum_2014.jpg/220px-Penina_Rosenblum_2014.jpg';
+  peninaImg.onload = function() { peninaLoaded = true; };
+
   var cramboImg = new Image();
   cramboImg.crossOrigin = 'anonymous';
   cramboImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Rami_Heuberger_%28cropped%29.jpg/200px-Rami_Heuberger_%28cropped%29.jpg';
@@ -613,7 +621,8 @@
     { id: 'idan', name: 'עידן עמדי', nameEn: 'Idan Amedi', desc: 'הלוחם הזמר - ירי מהיר', type: 'photo' },
     { id: 'lionphoto', name: 'אריה אמיתי', nameEn: 'Real Lion', desc: 'מלך החיות - נזק כפול', type: 'photo' },
     { id: 'hassan', name: 'מר חסון', nameEn: 'Mr. Hassan', desc: 'גבעת חלפון - מגנט אוטומטי', type: 'photo' },
-    { id: 'crambo', name: 'קרמבו', nameEn: 'Crambo', desc: 'מבצע סבתא - מהירות תנועה x2', type: 'photo' }
+    { id: 'crambo', name: 'קרמבו', nameEn: 'Crambo', desc: 'מבצע סבתא - מהירות תנועה x2', type: 'photo' },
+    { id: 'penina', name: 'פנינה רוזנבלום', nameEn: 'Penina Rosenblum', desc: 'מלכת היופי - מגן + 5 חיים', type: 'photo' }
   ];
   var selectedDefender = 'lion';
 
@@ -624,6 +633,7 @@
     if (id === 'lionphoto') return { img: lionPhotoImg, loaded: lionPhotoLoaded };
     if (id === 'hassan') return { img: hassanImg, loaded: hassanLoaded };
     if (id === 'crambo') return { img: cramboImg, loaded: cramboLoaded };
+    if (id === 'penina') return { img: peninaImg, loaded: peninaLoaded };
     return null;
   }
 
@@ -782,6 +792,31 @@
       windowCol1: '#66ddff', windowCol2: '#44aaff', cloudCols: ['rgba(20,40,80,0.18)','rgba(15,50,90,0.15)'] }
   };
 
+
+  // City aerial photo URLs for selection screen
+  var cityPhotoUrls = {
+    shiraz: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Nasir_al-Mulk_Mosque_Fisheye.jpg/640px-Nasir_al-Mulk_Mosque_Fisheye.jpg',
+    telaviv: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/16-04-01-Hackathon-Jerusalem-Hanse-House-WAT_5860.jpg/640px-16-04-01-Hackathon-Jerusalem-Hanse-House-WAT_5860.jpg',
+    tehran: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Milad_Tower_at_night.jpg/640px-Milad_Tower_at_night.jpg',
+    jerusalem: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Dome_of_Rock%2C_Temple_Mount%2C_Jerusalem.jpg/640px-Dome_of_Rock%2C_Temple_Mount%2C_Jerusalem.jpg',
+    beersheva: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Beersheba_Israel_View.jpg/640px-Beersheba_Israel_View.jpg',
+    doha: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Doha_skyline_in_the_morning.jpg/640px-Doha_skyline_in_the_morning.jpg'
+  };
+  // Preload city images
+  var cityBgImages = {};
+  (function() {
+    var keys = Object.keys(cityPhotoUrls);
+    for (var i = 0; i < keys.length; i++) {
+      (function(k) {
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = cityPhotoUrls[k];
+        cityBgImages[k] = { img: img, loaded: false };
+        img.onload = function() { cityBgImages[k].loaded = true; };
+      })(keys[i]);
+    }
+  })();
+
   // Far stars (slow parallax - deep space)
   var bgStarsFar = [];
   for (var i = 0; i < 50; i++) {
@@ -842,7 +877,7 @@
           card.innerHTML = '<img src="' + (di ? di.img.src : '') + '" alt="' + d.nameEn + '"><div class="char-label">' + d.name + '</div>';
         } else {
           // Lion - draw on small canvas
-          card.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#0038b8,#001a5c);margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">🦁</div><div class="char-label">' + d.name + '</div>';
+          card.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:linear-gradient(135deg,#0038b8,#001a5c);margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">🦁</div><div class="char-label">' + d.name + '</div>';
         }
         card.addEventListener('click', function() {
           selectedDefender = d.id;
@@ -893,7 +928,8 @@
         var c = cityThemes[key];
         var card = document.createElement('div');
         card.className = 'char-card' + (key === selectedCity ? ' selected' : '');
-        card.innerHTML = '<div style="width:64px;height:64px;border-radius:12px;border:2px solid rgba(255,255,255,0.3);background:linear-gradient(180deg,rgb(' + c.skyTop.join(',') + '),rgb(' + c.skyBot.join(',') + '));margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">' + c.emoji + '</div><div class="char-label">' + c.name + '</div><div style="color:#888;font-size:0.65rem;">' + c.nameEn + '</div>';
+        var photoUrl = cityPhotoUrls[key] || '';
+        card.innerHTML = '<div style="width:100%;height:55px;border-radius:8px;border:2px solid rgba(255,255,255,0.3);background:url(' + photoUrl + ') center/cover;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;text-shadow:0 0 8px #000;">' + c.emoji + '</div><div class="char-label" style="font-size:0.7rem;">' + c.name + '</div><div style="color:#888;font-size:0.55rem;">' + c.nameEn + '</div>';
         card.addEventListener('click', function() {
           selectedCity = key;
           var cards = grid.querySelectorAll('.char-card');
@@ -1030,7 +1066,7 @@
       }
     }
     eDirX = 1;
-    eSpeed = 0.4 + wave * 0.12;
+    eSpeed = Math.min(2.0, 0.4 + wave * 0.08);
     eBullets = [];
   }
 
@@ -2360,9 +2396,9 @@
         var e = enemies[i];
         e.shootCD -= dt * 1000;
         if (e.shootCD <= 0) {
-          e.shootCD = Math.max(700, 2800 - wave * 180) + Math.random() * 2500;
+          e.shootCD = Math.max(1200, 2800 - wave * 100) + Math.random() * 2500;
           if (Math.random() < 0.2 + wave * 0.04) {
-            var bulletSpeed = 2.2 + wave * 0.25;
+            var bulletSpeed = Math.min(4.5, 2.2 + wave * 0.15);
             eBullets.push({ x: e.x, y: e.y + e.size, vx: 0, vy: bulletSpeed });
           }
         }
@@ -2618,15 +2654,17 @@
     var msgs = ['עם ישראל חי! 🇮🇱','שאגת הארי! 🦁','ביחד ננצח! 💪','Am Yisrael Chai! 🇮🇱','ישראל חזקה! 💙'];
     document.getElementById('endMessage').textContent = msgs[Math.floor(Math.random() * msgs.length)];
 
-    // High score check
-    if (isHighScore(score)) {
-      var playerName = prompt('🏆 שיא חדש! הכנס שם:\nNew High Score! Enter name:', 'Player') || 'Player';
-      saveHighScore(playerName, score, wave, totalKills, selectedDefender);
-      document.getElementById('goHighScore').innerHTML = '🏆 NEW HIGH SCORE! 🏆';
-    } else {
-      document.getElementById('goHighScore').innerHTML = '';
-    }
-    renderHighScores('goHighScore');
+    // High score check - fetch latest scores first
+    fetchOnlineScores(function() {
+      if (isHighScore(score)) {
+        var playerName = prompt('🏆 שיא חדש! הכנס שם:\nNew High Score! Enter name:', 'Player') || 'Player';
+        saveHighScore(playerName, score, wave, totalKills, selectedDefender);
+        document.getElementById('goHighScore').innerHTML = '🏆 NEW HIGH SCORE! 🏆';
+      } else {
+        document.getElementById('goHighScore').innerHTML = '';
+      }
+      renderHighScores('goScoreList');
+    });
 
     document.getElementById('tapHint').style.display = 'none';
     gameOverReady = false;
@@ -3240,6 +3278,10 @@
     if (selectedDefender === 'crambo') {
       // "You start at your fastest pace and gradually you increase"
       PSPEED = isMobile ? 10 : 7.5;
+    }
+    if (selectedDefender === 'penina') {
+      // Beauty queen - shield from start + extra lives
+      pInvincible = 8; lives = 5;
     }
 
     updateHUD();
