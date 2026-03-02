@@ -1028,9 +1028,9 @@
     enemies = [];
     var rows = Math.min(2 + Math.floor(wave * 0.6), 5);
     var cols = Math.min(4 + wave, 10);
-    var spX = Math.min(55, (W - 60) / cols);
+    var spX = Math.min(55, (W - 100) / cols);
     var totW = (cols - 1) * spX;
-    var sx = (W - totW) / 2;
+    var sx = Math.max(50, (W - totW) / 2);
     var sy = 65;
     var hpBonus = Math.floor(wave / 3);
 
@@ -2124,12 +2124,14 @@
     }
 
 
-    // Zigzag enemies: sinusoidal side-to-side
+    // Zigzag enemies: sinusoidal side-to-side (clamped to bounds)
     for (var zi = 0; zi < enemies.length; zi++) {
       var ze = enemies[zi];
       if (ze.zigzag && !ze.kamikazeActive) {
         ze.zigzagPhase += dt * 4;
         ze.x += Math.sin(ze.zigzagPhase) * 1.8;
+        if (ze.x < 22) ze.x = 22;
+        else if (ze.x > W - 22) ze.x = W - 22;
       }
     }
 
@@ -2384,12 +2386,16 @@
       var hitEdge = false;
       for (var i = 0; i < enemies.length; i++) {
         enemies[i].x += eDirX * eSpeed;
-        if (enemies[i].x < 22 || enemies[i].x > W - 22) hitEdge = true;
+        // Clamp enemies to stay within bounds (prevent ping-pong at edges)
+        if (enemies[i].x < 22) { enemies[i].x = 22; hitEdge = true; }
+        else if (enemies[i].x > W - 22) { enemies[i].x = W - 22; hitEdge = true; }
         if (enemies[i].flash > 0) enemies[i].flash -= dt;
       }
       if (hitEdge) {
         eDirX *= -1;
-        for (var i = 0; i < enemies.length; i++) enemies[i].y += 10;
+        // Drop amount decreases at higher waves to prevent too-fast descent
+        var dropAmt = Math.max(4, 10 - wave * 0.3);
+        for (var i = 0; i < enemies.length; i++) enemies[i].y += dropAmt;
       }
 
       for (var i = 0; i < enemies.length; i++) {
