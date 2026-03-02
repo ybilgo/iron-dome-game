@@ -2524,6 +2524,7 @@
         boom(enemies[i].x, enemies[i].y);
         enemies.splice(i, 1);
         hitPlayer();
+        if (gameState === GAMEOVER) break; // Stop processing once game is over
       }
     }
 
@@ -2629,6 +2630,7 @@
   }
 
   function hitPlayer() {
+    if (gameState === GAMEOVER) return; // Already dead
     playerHP--;
     pInvincible = 1.5;
     shakeDur = 10;
@@ -2647,6 +2649,7 @@
   }
 
   function doGameOver() {
+    if (gameState === GAMEOVER) return; // Prevent multiple calls
     gameState = GAMEOVER;
     stopMusic();
     document.getElementById('hud').style.display = 'none';
