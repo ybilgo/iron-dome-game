@@ -445,6 +445,10 @@
 
 <canvas id="gameCanvas"></canvas>
 
+<!-- Firebase SDK (compat for simple REST-like usage) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <script>
 (function() {
   "use strict";
@@ -677,54 +681,82 @@
     }
   }
 
-  // ===== SHARED ONLINE HIGH SCORES =====
-  var SCORE_BLOB_ID = '019cab07-4f86-7837-bcd1-57cd170e7f9a';
-  var SCORE_API = 'https://jsonblob.com/api/jsonBlob/' + SCORE_BLOB_ID;
+  // ===== FIREBASE SHARED HIGH SCORES =====
+  var firebaseConfig = {
+    apiKey: "AIzaSyD-Nh9Pjvt0kR4sVyngcmI2tX5Q1Yig8ZI",
+    authDomain: "lion-roar-3d8be.firebaseapp.com",
+    databaseURL: "https://lion-roar-3d8be-default-rtdb.firebaseio.com",
+    projectId: "lion-roar-3d8be",
+    storageBucket: "lion-roar-3d8be.firebasestorage.app",
+    messagingSenderId: "946936424954",
+    appId: "1:946936424954:web:52da35e1e95aa85536dc43"
+  };
+  var fbApp = firebase.initializeApp(firebaseConfig);
+  var fbDb = firebase.database();
+  var fbScoresRef = fbDb.ref('highscores');
+
   var cachedScores = [];
   var HIGH_SCORE_KEY = 'lionRoarHighScores';
+  var fbListenerActive = false;
 
   function getHighScores() { return cachedScores.length > 0 ? cachedScores : getLocalScores(); }
   function getLocalScores() {
     try { var d = localStorage.getItem(HIGH_SCORE_KEY); return d ? JSON.parse(d) : []; } catch(e) { return []; }
   }
-  function fetchOnlineScores(cb) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', SCORE_API, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.timeout = 5000;
-    xhr.onload = function() {
-      try {
-        var data = JSON.parse(xhr.responseText);
-        cachedScores = (data.scores || []).sort(function(a,b) { return b.score - a.score; });
-        var local = getLocalScores();
-        for (var i = 0; i < local.length; i++) {
-          var exists = false;
-          for (var j = 0; j < cachedScores.length; j++) {
-            if (cachedScores[j].date === local[i].date && cachedScores[j].score === local[i].score) { exists = true; break; }
-          }
-          if (!exists) cachedScores.push(local[i]);
-        }
-        cachedScores.sort(function(a,b) { return b.score - a.score; });
-        cachedScores = cachedScores.slice(0, 15);
-        if (cb) cb(cachedScores);
-      } catch(e) { cachedScores = getLocalScores(); if (cb) cb(cachedScores); }
-    };
-    xhr.onerror = xhr.ontimeout = function() { cachedScores = getLocalScores(); if (cb) cb(cachedScores); };
-    xhr.send();
+
+  // Real-time listener — scores update live for all players
+  function startFirebaseListener() {
+    if (fbListenerActive) return;
+    fbListenerActive = true;
+    fbScoresRef.orderByChild('score').limitToLast(15).on('value', function(snapshot) {
+      var arr = [];
+      snapshot.forEach(function(child) { arr.push(child.val()); });
+      arr.sort(function(a, b) { return b.score - a.score; });
+      cachedScores = arr;
+      try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(arr)); } catch(e) {}
+    }, function(err) {
+      console.warn('Firebase listen error:', err);
+      cachedScores = getLocalScores();
+    });
   }
+
+  function fetchOnlineScores(cb) {
+    fbScoresRef.orderByChild('score').limitToLast(15).once('value').then(function(snapshot) {
+      var arr = [];
+      snapshot.forEach(function(child) { arr.push(child.val()); });
+      arr.sort(function(a, b) { return b.score - a.score; });
+      cachedScores = arr;
+      try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(arr)); } catch(e) {}
+      if (cb) cb(cachedScores);
+    }).catch(function(err) {
+      console.warn('Firebase fetch error:', err);
+      cachedScores = getLocalScores();
+      if (cb) cb(cachedScores);
+    });
+  }
+
   function saveHighScore(name, scr, wv, kills, defender) {
-    var entry = { name: name, score: scr, wave: wv, kills: kills, defender: defender, date: Date.now() };
+    // Basic anti-cheat: cap reasonable values
+    if (scr > 999999 || wv > 100 || kills > 9999) return cachedScores;
+    if (typeof name !== 'string' || name.length > 20) name = (name || '???').substring(0, 20);
+
+    var entry = { name: name, score: scr, wave: wv, kills: kills, defender: defender || '', date: Date.now() };
+
+    // Save locally first
     var local = getLocalScores();
     local.push(entry); local.sort(function(a,b) { return b.score - a.score; }); local = local.slice(0, 15);
     try { localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(local)); } catch(e) {}
-    cachedScores.push(entry); cachedScores.sort(function(a,b) { return b.score - a.score; }); cachedScores = cachedScores.slice(0, 15);
-    var xhr = new XMLHttpRequest();
-    xhr.open('PUT', SCORE_API, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.timeout = 5000;
-    xhr.send(JSON.stringify({ scores: cachedScores, version: '3.2' }));
+
+    // Push to Firebase (each score is its own node — no race condition!)
+    fbScoresRef.push(entry).catch(function(err) { console.warn('Firebase save error:', err); });
+
+    // Update cached
+    cachedScores.push(entry);
+    cachedScores.sort(function(a,b) { return b.score - a.score; });
+    cachedScores = cachedScores.slice(0, 15);
     return cachedScores;
   }
+
   function isHighScore(scr) {
     var scores = getHighScores();
     return scores.length < 15 || scr > (scores[scores.length - 1] || {score:0}).score;
@@ -744,6 +776,8 @@
     };
     fetchOnlineScores(render);
   }
+  // Start real-time listener + initial fetch
+  startFirebaseListener();
   fetchOnlineScores(function() {});
 
   // ===== BOSS ROTATION =====
