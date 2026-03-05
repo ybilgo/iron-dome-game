@@ -745,7 +745,7 @@
 
   function saveHighScore(name, scr, wv, kills, defender) {
     // Basic anti-cheat: cap reasonable values
-    if (scr > 999999 || wv > 100 || kills > 9999) return cachedScores;
+    if (scr > 9999999 || wv > 500 || kills > 99999) return cachedScores;
     if (typeof name !== 'string' || name.length > 20) name = (name || '???').substring(0, 20);
 
     var entry = { name: name, score: scr, wave: wv, kills: kills, defender: defender || '', date: Date.now() };
@@ -3331,7 +3331,7 @@
   function updateHUD() {
     document.getElementById('hudScore').textContent = score;
     document.getElementById('hudWave').textContent = wave;
-    document.getElementById('hudHP').textContent = playerHP + '/' + maxPlayerHP;
+    document.getElementById('hudHP').textContent = Math.ceil(playerHP) + '/' + maxPlayerHP;
     document.getElementById('hudKills').textContent = totalKills;
     var el = document.getElementById('hudLives');
     var html = '';
