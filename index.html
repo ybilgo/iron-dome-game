@@ -510,8 +510,8 @@
   var DESKTOP_SCALE = isMobile ? 4.0 : 1.35;
   var DEFENDER_SCALE = isMobile ? 2.0 : 1.35;
   var BULLET_PU_SCALE = isMobile ? 5.0 : 1.0;
-  var PW = Math.round(60 * DEFENDER_SCALE), PH = Math.round(52 * DEFENDER_SCALE), PSPEED = isMobile ? 8 : 4.5;
-  var BASE_SHOT_CD = isMobile ? 350 : 200;
+  var PW = Math.round(60 * DEFENDER_SCALE), PH = Math.round(52 * DEFENDER_SCALE), PSPEED = isMobile ? 10 : 4.5;
+  var BASE_SHOT_CD = isMobile ? 600 : 200;
   var FONT_TITLE = "'Courier New', monospace";
   var FONT_HEB = "Arial, sans-serif";
 
@@ -1213,6 +1213,7 @@
 
     eDirX = 1;
     eSpeed = Math.min(2.0, 0.4 + wave * 0.08);
+    if (isMobile) eSpeed *= 2;
     eBullets = [];
   
     // Mini bosses in regular waves (wave 15+)
@@ -2397,7 +2398,7 @@
 
   function drawEBullet(b) {
     ctx.save();
-    var ebs = isMobile ? 3.0 : 1.0; // enemy bullet scale
+    var ebs = isMobile ? 5.0 : 1.0; // enemy bullet scale
 
     // Zap bullets - cyan lightning bolt
     if (b.isZap) {
@@ -2728,7 +2729,7 @@
     // Update player bullets
     for (var i = pBullets.length - 1; i >= 0; i--) {
       var b = pBullets[i];
-      b.y -= (isMobile ? 14 : 7);
+      b.y -= (isMobile ? 28 : 7);
       if (b.vx) b.x += b.vx;
       if (b.y < -20) pBullets.splice(i, 1);
     }
@@ -2781,7 +2782,7 @@
     // BOSS UPDATE
     if (boss) {
       if (boss.y < boss.targetY) {
-        boss.y += 1.5;
+        boss.y += (isMobile ? 3 : 1.5);
       } else {
         boss.moveTimer += dt;
         if (boss.flash > 0) boss.flash -= dt;
@@ -3059,8 +3060,9 @@
         }
         // Mega enemies move independently
         if (e.mega) {
-          e.y += 0.3 + wave * 0.005;
-          e.x += Math.sin(performance.now() / 1000 + e.y * 0.01) * 1.5;
+          var megaSpd = isMobile ? 2 : 1;
+          e.y += (0.3 + wave * 0.005) * megaSpd;
+          e.x += Math.sin(performance.now() / 1000 + e.y * 0.01) * 1.5 * megaSpd;
           e.x = Math.max(e.size, Math.min(W - e.size, e.x));
           if (e.flash > 0) e.flash -= dt;
           continue;
@@ -3072,7 +3074,7 @@
       }
       if (hitEdge) {
         eDirX *= -1;
-        var dropAmt = Math.max(4, 10 - wave * 0.3);
+        var dropAmt = Math.max(4, 10 - wave * 0.3) * (isMobile ? 2 : 1);
         for (var i = 0; i < enemies.length; i++) {
           if (!enemies[i].atomBomb && !enemies[i].mega) enemies[i].y += dropAmt;
         }
@@ -4078,7 +4080,7 @@
     miniBoss = null;
     miniBosses = [];
     activeAmmos = [];
-    PSPEED = isMobile ? 8 : 4.5; // Reset speed
+    PSPEED = isMobile ? 10 : 4.5; // Reset speed
     px = W / 2;
     py = H - (isMobile ? 90 : 80);
     pInvincible = 0;
@@ -4099,7 +4101,7 @@
     }
     if (selectedDefender === 'crambo') {
       // "You start at your fastest pace and gradually you increase"
-      PSPEED = isMobile ? 13 : 7.5;
+      PSPEED = isMobile ? 16 : 7.5;
     }
     if (selectedDefender === 'penina') {
       // Beauty queen - shield from start + extra lives
