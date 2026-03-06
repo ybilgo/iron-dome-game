@@ -505,6 +505,51 @@
   var mcEl = document.getElementById('mobileControls');
   if (mcEl) mcEl.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
+  // ===== OBJECT POOL (reduces GC pressure) =====
+  var _pools = {};
+  function poolGet(type) {
+    if (_pools[type] && _pools[type].length > 0) return _pools[type].pop();
+    return {};
+  }
+  function poolPut(type, obj) {
+    if (!_pools[type]) _pools[type] = [];
+    if (_pools[type].length < 500) _pools[type].push(obj);
+  }
+  // Pooled splice: returns object to pool before removing from array
+  function poolSplice(arr, idx, type) {
+    poolPut(type, arr[idx]);
+    arr.splice(idx, 1);
+  }
+
+  // ===== SPATIAL GRID (speeds up collision detection) =====
+  var GRID_SIZE = 120; // cell size in pixels
+  var _grid = {};
+  function gridClear() { _grid = {}; }
+  function gridKey(cx, cy) { return cx + ',' + cy; }
+  function gridInsert(obj, idx) {
+    var cx = Math.floor(obj.x / GRID_SIZE);
+    var cy = Math.floor(obj.y / GRID_SIZE);
+    var k = gridKey(cx, cy);
+    if (!_grid[k]) _grid[k] = [];
+    _grid[k].push(idx);
+  }
+  function gridQuery(x, y, radius) {
+    var results = [];
+    var minCx = Math.floor((x - radius) / GRID_SIZE);
+    var maxCx = Math.floor((x + radius) / GRID_SIZE);
+    var minCy = Math.floor((y - radius) / GRID_SIZE);
+    var maxCy = Math.floor((y + radius) / GRID_SIZE);
+    for (var cx = minCx; cx <= maxCx; cx++) {
+      for (var cy = minCy; cy <= maxCy; cy++) {
+        var cell = _grid[gridKey(cx, cy)];
+        if (cell) {
+          for (var i = 0; i < cell.length; i++) results.push(cell[i]);
+        }
+      }
+    }
+    return results;
+  }
+
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
   var DESKTOP_SCALE = isMobile ? 4.0 : 1.35;
@@ -1385,7 +1430,10 @@
     for (var i = 0; i < n; i++) {
       var a = Math.random() * 6.28;
       var v = (Math.random() * 0.6 + 0.4) * spd;
-      particles.push({ x: x, y: y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, life: 1, dec: 0.013 + Math.random() * 0.02, sz: 1.5 + Math.random() * 3, col: col });
+      var p = poolGet('p');
+      p.x = x; p.y = y; p.vx = Math.cos(a)*v; p.vy = Math.sin(a)*v;
+      p.life = 1; p.dec = 0.013 + Math.random() * 0.02; p.sz = 1.5 + Math.random() * 3; p.col = col;
+      particles.push(p);
     }
   }
 
@@ -2597,10 +2645,10 @@
       var p = particles[i];
       p.x += p.vx; p.y += p.vy; p.vy += 0.05;
       p.life -= p.dec;
-      if (p.life <= 0) particles.splice(i, 1);
+      if (p.life <= 0) poolSplice(particles, i, 'p');
     }
     // Cap particles to prevent memory explosion
-    if (particles.length > 300) particles.splice(0, particles.length - 300);
+    while (particles.length > 300) poolSplice(particles, 0, 'p');
 
     for (var i = floats.length - 1; i >= 0; i--) {
       floats[i].y -= 1;
@@ -2716,7 +2764,7 @@
         }
         for (var i = eBullets.length - 1; i >= 0; i--) {
           if (Math.abs(eBullets[i].x - stealthPlane.x) < 80 && Math.abs(eBullets[i].y - stealthPlane.y) < 100) {
-            eBullets.splice(i, 1);
+            poolSplice(eBullets, i, 'eb');
           }
         }
       }
@@ -2731,8 +2779,10 @@
       var b = pBullets[i];
       b.y -= (isMobile ? 28 : 7);
       if (b.vx) b.x += b.vx;
-      if (b.y < -20) pBullets.splice(i, 1);
+      if (b.y < -20) poolSplice(pBullets, i, 'pb');
     }
+    // Cap pBullets to prevent memory explosion
+    while (pBullets.length > 150) poolSplice(pBullets, 0, 'pb');
 
     // Update powerups
     for (var i = powerUps.length - 1; i >= 0; i--) {
@@ -2857,59 +2907,59 @@
               var numBullets = boss.rageMode ? 10 : 7;
               for (var s = 0; s < numBullets; s++) {
                 var angle = boss.spiralAngle + (s / numBullets) * 6.28;
-                eBullets.push({
+                eBullets.push(mkEB({
                   x: boss.x, y: boss.y + boss.size * 0.6,
                   vx: Math.cos(angle) * bulletSpeed * 0.7,
                   vy: Math.sin(angle) * bulletSpeed * 0.5 + bulletSpeed * 0.5,
                   boss: true
-                });
+                }));
               }
               // Also fire aimed shot at player
               var aimDx = px - boss.x, aimDy = py - boss.y;
               var aimDist = Math.sqrt(aimDx*aimDx + aimDy*aimDy) || 1;
-              eBullets.push({
+              eBullets.push(mkEB({
                 x: boss.x, y: boss.y + boss.size * 0.6,
                 vx: (aimDx/aimDist) * bulletSpeed * 1.2,
                 vy: (aimDy/aimDist) * bulletSpeed * 1.2,
                 boss: true
-              });
+              }));
             } else if (wave >= 9) {
               // RAGE: alternating spread + aimed bursts
               if (boss.burstCount % 2 === 0) {
                 // Wide spread
                 for (var s = -3; s <= 3; s++) {
-                  eBullets.push({
+                  eBullets.push(mkEB({
                     x: boss.x + s * 12,
                     y: boss.y + boss.size * 0.6,
                     vx: s * 1.0,
                     vy: bulletSpeed,
                     boss: true
-                  });
+                  }));
                 }
               } else {
                 // Aimed triple shot at player
                 var aimDx = px - boss.x, aimDy = py - boss.y;
                 var aimDist = Math.sqrt(aimDx*aimDx + aimDy*aimDy) || 1;
                 for (var sp = -1; sp <= 1; sp++) {
-                  eBullets.push({
+                  eBullets.push(mkEB({
                     x: boss.x + sp * 15,
                     y: boss.y + boss.size * 0.6,
                     vx: (aimDx/aimDist) * bulletSpeed + sp * 0.5,
                     vy: (aimDy/aimDist) * bulletSpeed,
                     boss: true
-                  });
+                  }));
                 }
               }
             } else {
               // Normal boss: simple spread
               for (var s = -2; s <= 2; s++) {
-                eBullets.push({
+                eBullets.push(mkEB({
                   x: boss.x + s * 15,
                   y: boss.y + boss.size * 0.6,
                   vx: s * 0.8,
                   vy: bulletSpeed,
                   boss: true
-                });
+                }));
               }
             }
 
@@ -2957,7 +3007,7 @@
           addFloat(b.x, b.y - 10, '-' + dmg, '#ff8844');
 
           if (!b.ammoTypes || b.ammoTypes.indexOf(2) === -1) {
-            pBullets.splice(bi, 1);
+            poolSplice(pBullets, bi, 'pb');
           }
 
           if (boss.hp <= 0) {
@@ -2995,12 +3045,12 @@
           var aDx = px - mb.x, aDy = py - mb.y;
           var aDist = Math.sqrt(aDx*aDx + aDy*aDy) || 1;
           var mbSpeed = Math.min(5, 3 + wave * 0.02);
-          eBullets.push({
+          eBullets.push(mkEB({
             x: mb.x, y: mb.y + mb.size * 0.5,
             vx: (aDx/aDist) * mbSpeed,
             vy: (aDy/aDist) * mbSpeed,
             miniBoss: true
-          });
+          }));
         }
 
         // Touch player = 2 lives damage (not instant kill)
@@ -3033,7 +3083,7 @@
           interceptFX(b.x, b.y);
           playSfxHit();
           addFloat(b.x, b.y - 10, '-' + dmg, '#ff88ff');
-          if (!b.ammoTypes || b.ammoTypes.indexOf(2) === -1) pBullets.splice(bi, 1);
+          if (!b.ammoTypes || b.ammoTypes.indexOf(2) === -1) poolSplice(pBullets, bi, 'pb');
           if (mb.hp <= 0) {
             score += mb.maxHp * 10;
             totalKills += 5;
@@ -3096,12 +3146,12 @@
             var zapDx = px - e.x, zapDy = py - e.y;
             var zapDist = Math.sqrt(zapDx*zapDx + zapDy*zapDy) || 1;
             var zapSpeed = Math.min(5, 3 + wave * 0.03);
-            eBullets.push({
+            eBullets.push(mkEB({
               x: e.x, y: e.y + e.size,
               vx: (zapDx/zapDist) * zapSpeed,
               vy: (zapDy/zapDist) * zapSpeed,
               isZap: true
-            });
+            }));
           }
         }
 
@@ -3114,13 +3164,13 @@
             var misDist = Math.sqrt(misDx*misDx + misDy*misDy) || 1;
             var normalBulletSpeed = Math.min(4.5, 2.5 + wave * 0.18);
             var misSpeed = normalBulletSpeed * 2; // 2x normal speed
-            eBullets.push({
+            eBullets.push(mkEB({
               x: e.x, y: e.y + e.size,
               vx: (misDx/misDist) * misSpeed,
               vy: (misDy/misDist) * misSpeed,
               isMegaMissile: true,
               trackTimer: 2.0 // tracks player for 2 seconds
-            });
+            }));
           }
           continue; // mega doesn't use regular shooting
         }
@@ -3132,7 +3182,7 @@
           if (Math.random() < Math.min(0.85, 0.25 + wave * 0.05)) {
             var bulletSpeed = Math.min(4.5, 2.5 + wave * 0.18);
             if (isMobile) bulletSpeed *= 2;
-            eBullets.push({ x: e.x, y: e.y + e.size, vx: 0, vy: bulletSpeed });
+            eBullets.push(mkEB({ x: e.x, y: e.y + e.size, vx: 0, vy: bulletSpeed }));
           }
         }
       }
@@ -3156,17 +3206,23 @@
       }
       eb.y += eb.vy;
       if (eb.vx) eb.x += eb.vx;
-      if (eb.y > H + 20 || eb.x < -20 || eb.x > W + 20 || eb.y < -20) eBullets.splice(i, 1);
+      if (eb.y > H + 20 || eb.x < -20 || eb.x > W + 20 || eb.y < -20) poolSplice(eBullets, i, 'eb');
     }
     // Cap eBullets to prevent memory explosion
-    if (eBullets.length > 200) eBullets.splice(0, eBullets.length - 200);
+    while (eBullets.length > 200) poolSplice(eBullets, 0, 'eb');
 
-    // Player bullet vs enemies
+    // Player bullet vs enemies (spatial grid accelerated)
+    gridClear();
+    for (var gi = 0; gi < enemies.length; gi++) gridInsert(enemies[gi], gi);
+    var _deadEnemies = []; // collect indices to remove after loop
     for (var bi = pBullets.length - 1; bi >= 0; bi--) {
       var b = pBullets[bi];
       var hitEnemy = false;
-      for (var ei = enemies.length - 1; ei >= 0; ei--) {
+      var nearby = gridQuery(b.x, b.y, 60);
+      for (var ni = nearby.length - 1; ni >= 0; ni--) {
+        var ei = nearby[ni];
         var e = enemies[ei];
+        if (!e) continue; // already killed this frame
         var dx2 = b.x - e.x, dy2 = b.y - e.y;
         if (dx2*dx2 + dy2*dy2 < (e.size+5)*(e.size+5)) {
           hitEnemy = true;
@@ -3232,7 +3288,7 @@
               }
               addFloat(e.x, e.y + 10, 'SPLIT!', '#ff44ff');
             }
-            enemies.splice(ei, 1);
+            e._dead = true; // mark for removal after grid loop
 
             if (killsSinceLastStealth >= 30 && !stealthReady) {
               stealthReady = true;
@@ -3253,7 +3309,11 @@
           break;
         }
       }
-      if (hitEnemy && (!b.ammoTypes || b.ammoTypes.indexOf(2) === -1)) pBullets.splice(bi, 1);
+      if (hitEnemy && (!b.ammoTypes || b.ammoTypes.indexOf(2) === -1)) poolSplice(pBullets, bi, 'pb');
+    }
+    // Remove dead enemies after grid-based collision loop
+    for (var di = enemies.length - 1; di >= 0; di--) {
+      if (enemies[di]._dead) enemies.splice(di, 1);
     }
 
     // Enemy bullets hit player
@@ -3261,7 +3321,7 @@
       for (var i = eBullets.length - 1; i >= 0; i--) {
         var b = eBullets[i];
         if (Math.abs(b.x - px) < PW/2 + 3 && Math.abs(b.y - py) < PH/2 + 3) {
-          eBullets.splice(i, 1);
+          poolSplice(eBullets, i, 'eb');
           if (b.isZap) {
             // Zapper: disable shooting for 2 seconds
             zapperDisableTimer = 2.0;
@@ -3367,22 +3427,38 @@
     setTimeout(function() { playSfxWaveStart(); }, 1400);
   }
 
+  function mkEB(props) {
+    var b = poolGet('eb');
+    // Reset all possible eBullet properties to defaults
+    b.x = props.x; b.y = props.y; b.vx = props.vx || 0; b.vy = props.vy || 0;
+    b.boss = props.boss || false; b.isZap = props.isZap || false;
+    b.isMegaMissile = props.isMegaMissile || false;
+    b.trackTimer = props.trackTimer || 0;
+    b.miniBoss = props.miniBoss || false;
+    b.speed = props.speed || 0;
+    return b;
+  }
+  function mkPB(x, y, vx) {
+    var b = poolGet('pb');
+    b.x = x; b.y = y; b.vx = vx || 0; b.ammoTypes = activeAmmos.slice();
+    return b;
+  }
   function fireBullets() {
     var baseY = py - PH/2 - 12;
     if (shotStreams === 1) {
-      pBullets.push({ x: px, y: baseY, ammoTypes: activeAmmos.slice() });
+      pBullets.push(mkPB(px, baseY, 0));
     } else if (shotStreams === 2) {
-      pBullets.push({ x: px - 18, y: baseY, vx: -1.5, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 18, y: baseY, vx: 1.5, ammoTypes: activeAmmos.slice() });
+      pBullets.push(mkPB(px - 18, baseY, -1.5));
+      pBullets.push(mkPB(px + 18, baseY, 1.5));
     } else if (shotStreams === 3) {
-      pBullets.push({ x: px, y: baseY, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px - 22, y: baseY, vx: -2.5, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 22, y: baseY, vx: 2.5, ammoTypes: activeAmmos.slice() });
+      pBullets.push(mkPB(px, baseY, 0));
+      pBullets.push(mkPB(px - 22, baseY, -2.5));
+      pBullets.push(mkPB(px + 22, baseY, 2.5));
     } else {
-      pBullets.push({ x: px - 12, y: baseY, vx: -0.8, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 12, y: baseY, vx: 0.8, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px - 28, y: baseY, vx: -3.0, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 28, y: baseY, vx: 3.0, ammoTypes: activeAmmos.slice() });
+      pBullets.push(mkPB(px - 12, baseY, -0.8));
+      pBullets.push(mkPB(px + 12, baseY, 0.8));
+      pBullets.push(mkPB(px - 28, baseY, -3.0));
+      pBullets.push(mkPB(px + 28, baseY, 3.0));
     }
   }
 
@@ -4077,7 +4153,6 @@
     comboCount = 0; comboTimer = 0;
     boss = null;
     zapperDisableTimer = 0;
-    miniBoss = null;
     miniBosses = [];
     activeAmmos = [];
     PSPEED = isMobile ? 10 : 4.5; // Reset speed
