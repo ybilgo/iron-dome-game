@@ -507,7 +507,7 @@
 
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
-  var DESKTOP_SCALE = isMobile ? 3.0 : 1.35;
+  var DESKTOP_SCALE = isMobile ? 4.0 : 1.35;
   var PW = Math.round(60 * DESKTOP_SCALE), PH = Math.round(52 * DESKTOP_SCALE), PSPEED = isMobile ? 6 : 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
@@ -1094,10 +1094,11 @@
     enemies = [];
     var rows = Math.min(2 + Math.floor(wave * 0.6), 5);
     var cols = Math.min(4 + wave, 10);
-    var spX = Math.min(55, (W - 100) / cols);
+    var baseSpX = Math.min(55, (W - 100) / cols);
+    var spX = Math.round(baseSpX * DESKTOP_SCALE);
     var totW = (cols - 1) * spX;
     var sx = Math.max(50, (W - totW) / 2);
-    var sy = 65;
+    var sy = Math.round(65 * DESKTOP_SCALE);
     var hpBonus = Math.floor(wave / 3);
 
     for (var r = 0; r < rows; r++) {
@@ -1135,7 +1136,7 @@
         var hpMult = isSplitter ? 2 : (isTank ? 3 : (isHeavy ? 4 : (isShielded ? 1.5 : (isZapper ? 1.5 : 1))));
         enemies.push({
           x: sx + c * spX,
-          y: sy + r * 46,
+          y: sy + r * Math.round(46 * DESKTOP_SCALE),
           size: sz,
           hp: Math.ceil((baseHp + hpBonus) * hpMult),
           maxHp: Math.ceil((baseHp + hpBonus) * hpMult),
@@ -1346,7 +1347,7 @@
     var t = types[Math.floor(Math.random() * types.length)];
     var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
     var labels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '❤\uFE0F', shield: '🛡\uFE0F', magnet: '🧲' };
-    powerUps.push({ x: x, y: y, type: t, color: colors[t], label: labels[t], life: 8, vy: 2.0 });
+    powerUps.push({ x: x, y: y, type: t, color: colors[t], label: labels[t], life: 8, vy: 3.2 });
   }
 
   // ===== ACTIVATE STEALTH =====
@@ -2764,7 +2765,7 @@
         var gt = types_g[Math.floor(Math.random() * types_g.length)];
         var gcolors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
         var glabels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '\u2764\uFE0F', shield: '\uD83D\uDEE1\uFE0F', magnet: '\uD83E\uDDF2' };
-        powerUps.push({ x: gpx, y: 20, type: gt, color: gcolors[gt], label: glabels[gt], life: 12, vy: 2.5 });
+        powerUps.push({ x: gpx, y: 20, type: gt, color: gcolors[gt], label: glabels[gt], life: 12, vy: 4.8 });
         addFloat(gpx, 40, '\u2B07 POWER-UP!', '#ffd700');
       }
     }
