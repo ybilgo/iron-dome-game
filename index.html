@@ -197,7 +197,7 @@
   }
   .hud-item { color: #fff; display: flex; align-items: center; gap: 4px; }
   .hud-value { color: #60a5fa; font-weight: 700; }
-  .hud-lives { display: flex; gap: 2px; font-size: 0.85rem; }
+  .hud-lives { display: flex; gap: 2px; font-size: 0.85rem; flex-shrink: 0; max-width: 120px; overflow: hidden; }
 
   /* ===== NEW MOBILE CONTROLS: dual-thumb layout ===== */
   #mobileControls {
@@ -507,7 +507,7 @@
 
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
-  var DESKTOP_SCALE = isMobile ? 2.0 : 1.35;
+  var DESKTOP_SCALE = isMobile ? 3.0 : 1.35;
   var PW = Math.round(60 * DESKTOP_SCALE), PH = Math.round(52 * DESKTOP_SCALE), PSPEED = isMobile ? 6 : 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
@@ -692,7 +692,7 @@
     var nextRank = ranks[currentRankIdx + 1];
     if (totalKills >= nextRank.kills) {
       currentRankIdx++;
-      lives++;
+      lives = Math.min(lives + 1, 5);
       maxPlayerHP = Math.min(maxPlayerHP + 1, 5);
       playerHP = Math.min(playerHP + 1, maxPlayerHP);
       // Strengthen base shots
@@ -1346,7 +1346,7 @@
     var t = types[Math.floor(Math.random() * types.length)];
     var colors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
     var labels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '❤\uFE0F', shield: '🛡\uFE0F', magnet: '🧲' };
-    powerUps.push({ x: x, y: y, type: t, color: colors[t], label: labels[t], life: 8, vy: 0.8 });
+    powerUps.push({ x: x, y: y, type: t, color: colors[t], label: labels[t], life: 8, vy: 2.0 });
   }
 
   // ===== ACTIVATE STEALTH =====
@@ -2764,7 +2764,7 @@
         var gt = types_g[Math.floor(Math.random() * types_g.length)];
         var gcolors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
         var glabels = { fireRate: 'FAST', split2: 'x2', split3: 'x3', split4: 'x4', explosive: 'BOOM', piercing: 'PIERCE', electric: 'ZAP', heart: '\u2764\uFE0F', shield: '\uD83D\uDEE1\uFE0F', magnet: '\uD83E\uDDF2' };
-        powerUps.push({ x: gpx, y: 20, type: gt, color: gcolors[gt], label: glabels[gt], life: 12, vy: 1.2 });
+        powerUps.push({ x: gpx, y: 20, type: gt, color: gcolors[gt], label: glabels[gt], life: 12, vy: 2.5 });
         addFloat(gpx, 40, '\u2B07 POWER-UP!', '#ffd700');
       }
     }
@@ -3229,7 +3229,7 @@
 
             if (totalKills > 0 && totalKills % 100 === 0 && totalKills !== lastExtraLife) {
               lastExtraLife = totalKills;
-              lives++;
+              lives = Math.min(lives + 1, 5);
               trumpTimer = 3;
               addFloat(W/2, H/2 - 100, '+1 LIFE!', '#ffd700');
             }
@@ -3381,7 +3381,7 @@
       if (playerHP < maxPlayerHP) {
         playerHP = maxPlayerHP; // heal to full
         addFloat(pu.x, pu.y - 30, '+1 HP', '#ff3366');
-      } else if (lives < 7) {
+      } else if (lives < 5) {
         lives++;
         addFloat(pu.x, pu.y - 30, '+1 LIFE', '#ff3366');
       } else {
@@ -3479,7 +3479,7 @@
     document.getElementById('hudKills').textContent = totalKills;
     var el = document.getElementById('hudLives');
     var html = '';
-    for (var i = 0; i < Math.max(lives, 5); i++) html += '<span>' + (i < lives ? '❤️' : '🖤') + '</span>';
+    for (var i = 0; i < 5; i++) html += '<span>' + (i < lives ? '❤️' : '🖤') + '</span>';
     el.innerHTML = html;
 
     // Update rank display
