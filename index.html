@@ -2460,6 +2460,67 @@
     }
   }
 
+  function drawStealthPlane() {
+    if (!stealthPlane) return;
+    var sp = stealthPlane;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    // F-35 body
+    ctx.fillStyle = '#334455';
+    ctx.beginPath();
+    ctx.moveTo(sp.x + 40, sp.y);
+    ctx.lineTo(sp.x - 30, sp.y - 8);
+    ctx.lineTo(sp.x - 35, sp.y);
+    ctx.lineTo(sp.x - 30, sp.y + 8);
+    ctx.closePath();
+    ctx.fill();
+    // Wings
+    ctx.fillStyle = '#445566';
+    ctx.beginPath();
+    ctx.moveTo(sp.x + 5, sp.y - 4);
+    ctx.lineTo(sp.x - 15, sp.y - 22);
+    ctx.lineTo(sp.x - 25, sp.y - 20);
+    ctx.lineTo(sp.x - 15, sp.y - 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(sp.x + 5, sp.y + 4);
+    ctx.lineTo(sp.x - 15, sp.y + 22);
+    ctx.lineTo(sp.x - 25, sp.y + 20);
+    ctx.lineTo(sp.x - 15, sp.y + 4);
+    ctx.closePath();
+    ctx.fill();
+    // Tail fins
+    ctx.fillStyle = '#556677';
+    ctx.beginPath();
+    ctx.moveTo(sp.x - 28, sp.y - 2);
+    ctx.lineTo(sp.x - 35, sp.y - 12);
+    ctx.lineTo(sp.x - 38, sp.y - 10);
+    ctx.lineTo(sp.x - 33, sp.y - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(sp.x - 28, sp.y + 2);
+    ctx.lineTo(sp.x - 35, sp.y + 12);
+    ctx.lineTo(sp.x - 38, sp.y + 10);
+    ctx.lineTo(sp.x - 33, sp.y + 2);
+    ctx.closePath();
+    ctx.fill();
+    // Afterburner
+    ctx.fillStyle = '#ff6600';
+    ctx.globalAlpha = 0.6 + Math.random() * 0.3;
+    ctx.beginPath();
+    ctx.ellipse(sp.x - 38, sp.y, 8 + Math.random() * 4, 3, 0, 0, 6.28);
+    ctx.fill();
+    // US flag marker
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('🇺🇸', sp.x - 5, sp.y - 24);
+    ctx.restore();
+  }
+
   function drawStealthIndicator() {
     if (gameState !== PLAYING) return;
     var barW = 80, barH = 8;
