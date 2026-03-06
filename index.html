@@ -645,6 +645,7 @@
 
   var powerUps = [];
   var trumpTimer = 0;
+  var trumpPause = 0;
   var guaranteedPowerUpTimer = 0;
   var hasMagnet = false;
   var magnetTimer = 0;
@@ -1244,7 +1245,7 @@
     var totW = (cols - 1) * spX;
     var sx = Math.max(50, (W - totW) / 2);
     var sy = Math.round(65 * DESKTOP_SCALE);
-    var hpBonus = Math.floor(wave / 3);
+    var hpBonus = Math.floor(wave / 4);
 
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
@@ -1315,8 +1316,8 @@
           x: megaX,
           y: -30 - mi * 60,
           size: Math.round(40 * DESKTOP_SCALE),
-          hp: Math.ceil(15 + wave * 0.5),
-          maxHp: Math.ceil(15 + wave * 0.5),
+          hp: Math.ceil(12 + wave * 0.35),
+          maxHp: Math.ceil(12 + wave * 0.35),
           flash: 0,
           shootCD: (3000 + Math.random() * 2000) / diffMult[difficulty].eShootRate,
           splitter: false, kamikaze: false, kamikazeActive: false,
@@ -1355,7 +1356,7 @@
     }
 
     eDirX = 1;
-    eSpeed = Math.min(2.0, 0.4 + wave * 0.08);
+    eSpeed = Math.min(1.6, 0.4 + wave * 0.055);
     eSpeed *= diffMult[difficulty].eSpeed;
     if (isMobile) eSpeed *= 2;
     eBullets = [];
@@ -1369,8 +1370,8 @@
           y: -40 - mb * 50,
           targetY: 60 + Math.random() * 100,
           size: Math.round(30 * DESKTOP_SCALE),
-          hp: Math.ceil(15 + wave * 0.5),
-          maxHp: Math.ceil(15 + wave * 0.5),
+          hp: Math.ceil(12 + wave * 0.35),
+          maxHp: Math.ceil(12 + wave * 0.35),
           flash: 0,
           moveTimer: Math.random() * 6.28,
           shootTimer: 0,
@@ -1421,7 +1422,7 @@
 
     var totalHP = baseHP + extraHP;
     // Early bosses (up to wave 30) are 5x stronger
-    if (wave <= 30) totalHP = totalHP * 5;
+    if (wave <= 30) totalHP = totalHP * 3;
     boss = {
       x: spawnX,
       y: spawnY,
@@ -2485,14 +2486,12 @@
         var blinkSpeed = 8 + (3 - p.life) * 6;
         alpha *= 0.4 + 0.6 * Math.abs(Math.sin(performance.now() * 0.001 * blinkSpeed));
       }
-      ctx.globalAlpha = alpha;
-      var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 14*bps);
-      glow.addColorStop(0, p.color);
-      glow.addColorStop(1, p.color + '00');
-      ctx.fillStyle = glow;
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 14*bps, 0, 6.28);
       ctx.fill();
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 8*bps, 0, 6.28);
@@ -2716,7 +2715,7 @@
     if (gameState !== PLAYING) return;
     var ts = MOBILE_TEXT_SCALE;
     var barW = 80*ts, barH = 8*ts;
-    var barX = W - barW - 10, barY = 55*ts;
+    var barX = W - barW - 10, barY = 80*ts;
     var ratio = killsSinceLastStealth / 30;
 
     ctx.save();
@@ -2747,7 +2746,7 @@
     ctx.fillStyle = activeAmmos.length > 0 ? ammoColors[activeAmmos[0]] : ammoColors[0];
     ctx.font = 'bold ' + Math.round(11*MOBILE_TEXT_SCALE) + 'px ' + FONT_TITLE;
     ctx.textAlign = 'left';
-    ctx.fillText(txt, 10, 65);
+    ctx.fillText(txt, 10, 95);
     ctx.restore();
   }
 
@@ -2779,6 +2778,7 @@
     }
 
     if (trumpTimer > 0) trumpTimer -= dt;
+    if (trumpPause > 0) { trumpPause -= dt; return; }
 
     if (gameState === WAVE_INTRO) {
       waveTimer -= dt;
@@ -3303,7 +3303,7 @@
         // Regular enemy shooting
         e.shootCD -= dt * 1000;
         if (e.shootCD <= 0) {
-          e.shootCD = (Math.max(2400, 5600 - wave * 200) + Math.random() * 5000) / diffMult[difficulty].eShootRate;
+          e.shootCD = (Math.max(3000, 6000 - wave * 180) + Math.random() * 5000) / diffMult[difficulty].eShootRate;
           if (Math.random() < Math.min(0.85, 0.25 + wave * 0.05)) {
             var bulletSpeed = Math.min(4.5, 2.5 + wave * 0.18);
             if (isMobile) bulletSpeed *= 2;
@@ -3429,6 +3429,8 @@
               lastExtraLife = totalKills;
               lives = Math.min(lives + 1, 5);
               trumpTimer = 3;
+              trumpPause = 1.5;
+              playTrumpFanfare();
               addFloat(W/2, H/2 - 100, '+1 LIFE!', '#ffd700');
             }
           } else {
@@ -4157,6 +4159,43 @@
     if (musicCtx && musicCtx.state === 'suspended') musicCtx.resume();
   }
 
+  function playTrumpFanfare() {
+    if (!musicCtx) return;
+    try {
+      var now = musicCtx.currentTime;
+      // Triumphant brass fanfare
+      var notes = [261.6, 329.6, 392.0, 523.3]; // C4 E4 G4 C5
+      for (var i = 0; i < notes.length; i++) {
+        var osc = musicCtx.createOscillator();
+        var g = musicCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.value = notes[i];
+        g.gain.setValueAtTime(0, now + i * 0.15);
+        g.gain.linearRampToValueAtTime(0.15 * sfxVolume, now + i * 0.15 + 0.05);
+        g.gain.linearRampToValueAtTime(0, now + i * 0.15 + 0.4);
+        osc.connect(g);
+        g.connect(sfxGain || musicCtx.destination);
+        osc.start(now + i * 0.15);
+        osc.stop(now + i * 0.15 + 0.5);
+      }
+      // Final chord
+      var chordNotes = [261.6, 329.6, 392.0, 523.3];
+      for (var j = 0; j < chordNotes.length; j++) {
+        var osc2 = musicCtx.createOscillator();
+        var g2 = musicCtx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.value = chordNotes[j];
+        g2.gain.setValueAtTime(0, now + 0.6);
+        g2.gain.linearRampToValueAtTime(0.1 * sfxVolume, now + 0.65);
+        g2.gain.linearRampToValueAtTime(0, now + 1.5);
+        osc2.connect(g2);
+        g2.connect(sfxGain || musicCtx.destination);
+        osc2.start(now + 0.6);
+        osc2.stop(now + 1.6);
+      }
+    } catch(e) {}
+  }
+
   // Enemy hit - quick zap
   function playSfxHit() {
     if (!musicCtx) initMusic();
@@ -4306,6 +4345,7 @@
     lastExtraLife = 0;
     fireRateMultiplier = 1; shotStreams = 1; ammoType = 0; activeAmmos = []; powerUpTimer = 0;
     trumpTimer = 0;
+    trumpPause = 0;
     pBullets = []; enemies = []; eBullets = [];
     particles = []; floats = []; powerUps = [];
     guaranteedPowerUpTimer = 0; hasMagnet = false; magnetTimer = 0; bgScroll = 0;
