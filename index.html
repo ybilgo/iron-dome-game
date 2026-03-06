@@ -546,8 +546,7 @@
   // New enemy types
   var zapperDisableTimer = 0; // When > 0, player can't shoot
   var miniBoss = null; // Mini boss object
-  var miniBosses = [];
-    activeAmmos = []; // Array of mini bosses for wave 60+
+  var miniBosses = []; // Array of mini bosses
 
   // === PRELOAD REAL PHOTOS ===
   var khameneiImg = new Image();
@@ -1301,7 +1300,8 @@
           moveTimer: Math.random() * 6.28,
           shootTimer: 0,
           roamTargetX: W / 2,
-          roamTargetY: 120
+          roamTargetY: 120,
+          bossCharIdx: Math.floor(Math.random() * 4)
         });
       }
     } else {
@@ -2209,12 +2209,13 @@
       if (mb.flash > 0) ctx.globalAlpha = 0.5 + Math.sin(performance.now() / 30) * 0.3;
 
       // Get boss character
-      var charImg = null;
+      var charObj = null;
       var charName = 'MINI BOSS';
-      try {
-        charImg = bossCharacters[mb.bossCharIdx];
-        charName = bossNames[mb.bossCharIdx];
-      } catch(e) {}
+      var charIdx = mb.bossCharIdx || 0;
+      if (charIdx >= 0 && charIdx < bossCharacters.length) {
+        charObj = bossCharacters[charIdx];
+        charName = charObj.nameHe || charObj.name || 'MINI BOSS';
+      }
 
       // === Mini Spaceship body - scaled down boss design ===
       ctx.fillStyle = '#9933ff';
@@ -2246,25 +2247,23 @@
       ctx.closePath();
       ctx.fill();
 
-      // Draw character image in a circle
-      if (charImg) {
-        ctx.fillStyle = '#9933ff';
+      // Draw character image in dome
+      if (charObj && charObj.loaded()) {
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(x, y, s * 0.4, 0, 6.28);
-        ctx.fill();
-        ctx.strokeStyle = '#cccccc';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
+        ctx.arc(x, y - s * 0.1, s * 0.38, 0, 6.28);
+        ctx.clip();
+        var imgSize = s * 0.8;
         try {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(x, y, s * 0.35, 0, 6.28);
-          ctx.clip();
-          var imgSize = s * 0.7;
-          ctx.drawImage(charImg, x - imgSize/2, y - imgSize/2, imgSize, imgSize);
-          ctx.restore();
-        } catch(e) {}
+          ctx.drawImage(charObj.img(), x - imgSize/2, y - s * 0.1 - imgSize * 0.45, imgSize, imgSize);
+        } catch(err) {}
+        ctx.restore();
+      } else {
+        // Fallback: colored dome
+        ctx.fillStyle = 'rgba(200,100,255,0.5)';
+        ctx.beginPath();
+        ctx.arc(x, y - s * 0.1, s * 0.35, 0, 6.28);
+        ctx.fill();
       }
 
       // Front dome
@@ -2492,7 +2491,7 @@
     if (fireRateMultiplier > 1) txt += 'FAST ';
     if (powerUpTimer > 0) txt += '(' + Math.ceil(powerUpTimer) + 's)';
 
-    ctx.fillStyle = ammoColors[ammoType];
+    ctx.fillStyle = activeAmmos.length > 0 ? ammoColors[activeAmmos[0]] : ammoColors[0];
     ctx.font = 'bold 11px ' + FONT_TITLE;
     ctx.textAlign = 'left';
     ctx.fillText(txt, 10, 65);
@@ -3980,7 +3979,7 @@
     totalKills = 0; killsSinceLastStealth = 0;
     stealthReady = false; stealthActive = false; stealthPlane = null;
     lastExtraLife = 0;
-    fireRateMultiplier = 1; shotStreams = 1; ammoType = 0; powerUpTimer = 0;
+    fireRateMultiplier = 1; shotStreams = 1; ammoType = 0; activeAmmos = []; powerUpTimer = 0;
     trumpTimer = 0;
     pBullets = []; enemies = []; eBullets = [];
     particles = []; floats = []; powerUps = [];
