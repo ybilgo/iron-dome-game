@@ -461,6 +461,21 @@
   var W = 0, H = 0;
   var dpr = window.devicePixelRatio || 1;
 
+  // Detect mobile BEFORE resize() uses it
+  var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+  // Ellipse polyfill for older mobile browsers
+  if (!CanvasRenderingContext2D.prototype.ellipse) {
+    CanvasRenderingContext2D.prototype.ellipse = function(cx, cy, rx, ry, rot, sa, ea, ccw) {
+      this.save();
+      this.translate(cx, cy);
+      this.rotate(rot);
+      this.scale(rx, ry);
+      this.arc(0, 0, 1, sa, ea, ccw);
+      this.restore();
+    };
+  }
+
   // Mobile zoom out: scale the game world to show more area
   var mobileScale = 1;
 
@@ -798,7 +813,7 @@
   ];
 
   var keys = {};
-  var isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  // isMobile already declared above (before resize)
 
   document.getElementById('instrText').textContent = isMobile
     ? '👆 לחץ להתחיל! | אגודל שמאל = ירי | אגודל ימין = תזוזה'
