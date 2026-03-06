@@ -508,7 +508,9 @@
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
   var DESKTOP_SCALE = isMobile ? 4.0 : 1.35;
-  var PW = Math.round(60 * DESKTOP_SCALE), PH = Math.round(52 * DESKTOP_SCALE), PSPEED = isMobile ? 6 : 4.5;
+  var DEFENDER_SCALE = isMobile ? 2.0 : 1.35;
+  var BULLET_PU_SCALE = isMobile ? 5.0 : 1.0;
+  var PW = Math.round(60 * DEFENDER_SCALE), PH = Math.round(52 * DEFENDER_SCALE), PSPEED = isMobile ? 6 : 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
   var FONT_HEB = "Arial, sans-serif";
@@ -1272,13 +1274,16 @@
       }
     }
 
+    var totalHP = baseHP + extraHP;
+    // Early bosses (up to wave 30) are 5x stronger
+    if (wave <= 30) totalHP = totalHP * 5;
     boss = {
       x: spawnX,
       y: spawnY,
       targetY: 100,
       size: bossSize,
-      hp: baseHP + extraHP,
-      maxHp: baseHP + extraHP,
+      hp: totalHP,
+      maxHp: totalHP,
       color: col,
       flash: 0,
       shootTimer: 0,
@@ -1559,7 +1564,7 @@
 
   function drawPhotoDefender(defInfo) {
     var x = px, y = py;
-    var s = DESKTOP_SCALE;
+    var s = DEFENDER_SCALE;
     // Platform / vehicle
     ctx.fillStyle = '#0038b8';
     ctx.beginPath();
@@ -1632,7 +1637,7 @@
     }
 
     // === LION (Blue-White Israeli uniform) ===
-    var s = DESKTOP_SCALE;
+    var s = DEFENDER_SCALE;
 
     // === Body - white with blue vest ===
     ctx.fillStyle = '#ffffff';
@@ -1825,28 +1830,29 @@
       }
     }
 
+    var bps = BULLET_PU_SCALE;
     // Trail glow
-    var tg = ctx.createRadialGradient(b.x, b.y + 6, 0, b.x, b.y + 6, 12);
+    var tg = ctx.createRadialGradient(b.x, b.y + 6*bps, 0, b.x, b.y + 6*bps, 12*bps);
     tg.addColorStop(0, col + '66');
     tg.addColorStop(1, col + '00');
     ctx.fillStyle = tg;
-    ctx.beginPath(); ctx.arc(b.x, b.y + 6, 12, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x, b.y + 6*bps, 12*bps, 0, 6.28); ctx.fill();
 
     // Spin the star
     ctx.translate(b.x, b.y);
     ctx.rotate(performance.now() / 200 + (b.x * 0.1));
     ctx.translate(-b.x, -b.y);
 
-    var starSize = 5;
+    var starSize = 5 * bps;
     if (b.ammoTypes && b.ammoTypes.length > 0) {
-      if (b.ammoTypes.indexOf(1) !== -1) starSize = 7;       // Explosive - bigger star
-      else if (b.ammoTypes.indexOf(2) !== -1) starSize = 5;   // Piercing
-      else if (b.ammoTypes.indexOf(3) !== -1) starSize = 6;   // Electric
+      if (b.ammoTypes.indexOf(1) !== -1) starSize = 7 * bps;       // Explosive - bigger star
+      else if (b.ammoTypes.indexOf(2) !== -1) starSize = 5 * bps;   // Piercing
+      else if (b.ammoTypes.indexOf(3) !== -1) starSize = 6 * bps;   // Electric
     }
 
     // Outer glow
     ctx.shadowColor = col;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 8 * bps;
     drawStarOfDavid(b.x, b.y, starSize, col);
     ctx.shadowBlur = 0;
 
@@ -2310,23 +2316,24 @@
 
 
   function drawPowerUps() {
+    var bps = BULLET_PU_SCALE;
     for (var i = 0; i < powerUps.length; i++) {
       var p = powerUps[i];
       ctx.save();
       ctx.globalAlpha = Math.min(1, p.life);
-      var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 14);
+      var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 14*bps);
       glow.addColorStop(0, p.color);
       glow.addColorStop(1, p.color + '00');
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 14, 0, 6.28);
+      ctx.arc(p.x, p.y, 14*bps, 0, 6.28);
       ctx.fill();
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 8, 0, 6.28);
+      ctx.arc(p.x, p.y, 8*bps, 0, 6.28);
       ctx.fill();
       ctx.fillStyle = '#000';
-      ctx.font = 'bold 7px ' + FONT_TITLE;
+      ctx.font = 'bold ' + Math.round(7*bps) + 'px ' + FONT_TITLE;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(p.label, p.x, p.y);
