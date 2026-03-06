@@ -1143,7 +1143,7 @@
           hp: Math.ceil((baseHp + hpBonus) * hpMult),
           maxHp: Math.ceil((baseHp + hpBonus) * hpMult),
           flash: 0,
-          shootCD: 2000 + Math.random() * 4000,
+          shootCD: 4000 + Math.random() * 8000,
           splitter: isSplitter,
           kamikaze: isKamikaze,
           kamikazeActive: false,
@@ -1175,7 +1175,7 @@
           hp: Math.ceil(15 + wave * 0.5),
           maxHp: Math.ceil(15 + wave * 0.5),
           flash: 0,
-          shootCD: 1500 + Math.random() * 1000,
+          shootCD: 3000 + Math.random() * 2000,
           splitter: false, kamikaze: false, kamikazeActive: false,
           shielded: false, shieldHP: 0,
           zigzag: false, zigzagPhase: 0,
@@ -1342,7 +1342,7 @@
   var shieldTimer = 0; // shield power-up: temporary invincibility
   function maybeSpawnPowerUp(x, y) {
     if (Math.random() > 0.14) return;
-    var types = ['fireRate', 'split2', 'split3', 'split4', 'explosive', 'piercing', 'electric', 'magnet'];
+    var types = ['split2', 'split3', 'split4', 'explosive', 'piercing', 'electric', 'magnet'];
     // From wave 9+: add hearts and shields
     if (wave >= 9) {
       types.push('heart', 'heart', 'shield'); // hearts more common
@@ -2769,7 +2769,7 @@
         guaranteedPowerUpTimer = 0;
         // Drop from random X at top of screen
         var gpx = 50 + Math.random() * (W - 100);
-        var types_g = ['fireRate', 'split2', 'split3', 'explosive', 'piercing', 'electric', 'heart', 'shield', 'magnet'];
+        var types_g = ['split2', 'split3', 'explosive', 'piercing', 'electric', 'heart', 'shield', 'magnet'];
         if (wave >= 9) types_g.push('heart', 'heart', 'shield');
         var gt = types_g[Math.floor(Math.random() * types_g.length)];
         var gcolors = { fireRate: '#ffff00', split2: '#00ff88', split3: '#00ccff', split4: '#ff88ff', explosive: '#ff8844', piercing: '#22ff88', electric: '#aa66ff', heart: '#ff3366', shield: '#44ddff', magnet: '#ff66cc' };
@@ -2843,9 +2843,9 @@
         if (isMobile) bulletSpeed *= 2;
         if (boss.rageMode) bulletSpeed *= 1.3;
         var burstMax = wave >= 12 ? 8 : (wave >= 9 ? 6 : 5);
-        var pauseTime = wave >= 12 ? 0.6 : (wave >= 9 ? 1.0 : 1.5);
+        var pauseTime = wave >= 12 ? 1.2 : (wave >= 9 ? 2.0 : 3.0);
         if (boss.rageMode) pauseTime *= 0.6;
-        var shootInterval = wave >= 12 ? 0.15 : (wave >= 9 ? 0.2 : 0.3);
+        var shootInterval = wave >= 12 ? 0.30 : (wave >= 9 ? 0.4 : 0.6);
 
         if (boss.shootPhase === 0) {
           boss.shootTimer -= dt;
@@ -2991,7 +2991,7 @@
         // Shoot at player
         mb.shootTimer -= dt;
         if (mb.shootTimer <= 0) {
-          mb.shootTimer = 1.5 + Math.random();
+          mb.shootTimer = 3.0 + Math.random() * 2;
           var aDx = px - mb.x, aDy = py - mb.y;
           var aDist = Math.sqrt(aDx*aDx + aDy*aDy) || 1;
           var mbSpeed = Math.min(5, 3 + wave * 0.02);
@@ -3128,7 +3128,7 @@
         // Regular enemy shooting
         e.shootCD -= dt * 1000;
         if (e.shootCD <= 0) {
-          e.shootCD = Math.max(1200, 2800 - wave * 100) + Math.random() * 2500;
+          e.shootCD = Math.max(2400, 5600 - wave * 200) + Math.random() * 5000;
           if (Math.random() < Math.min(0.85, 0.25 + wave * 0.05)) {
             var bulletSpeed = Math.min(4.5, 2.5 + wave * 0.18);
             if (isMobile) bulletSpeed *= 2;
@@ -3216,7 +3216,7 @@
                   hp: Math.max(1, Math.floor(e.maxHp * 0.4)),
                   maxHp: Math.max(1, Math.floor(e.maxHp * 0.4)),
                   flash: 0,
-                  shootCD: 1500 + Math.random() * 2000,
+                  shootCD: 3000 + Math.random() * 4000,
                   splitter: false,
                   splitChild: true,
                   kamikaze: false,
@@ -3372,17 +3372,17 @@
     if (shotStreams === 1) {
       pBullets.push({ x: px, y: baseY, ammoTypes: activeAmmos.slice() });
     } else if (shotStreams === 2) {
-      pBullets.push({ x: px - 8, y: baseY, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 8, y: baseY, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px - 18, y: baseY, vx: -1.5, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px + 18, y: baseY, vx: 1.5, ammoTypes: activeAmmos.slice() });
     } else if (shotStreams === 3) {
       pBullets.push({ x: px, y: baseY, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px - 10, y: baseY, vx: -0.5, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 10, y: baseY, vx: 0.5, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px - 22, y: baseY, vx: -2.5, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px + 22, y: baseY, vx: 2.5, ammoTypes: activeAmmos.slice() });
     } else {
-      pBullets.push({ x: px - 6, y: baseY, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 6, y: baseY, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px - 14, y: baseY, vx: -0.8, ammoTypes: activeAmmos.slice() });
-      pBullets.push({ x: px + 14, y: baseY, vx: 0.8, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px - 12, y: baseY, vx: -0.8, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px + 12, y: baseY, vx: 0.8, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px - 28, y: baseY, vx: -3.0, ammoTypes: activeAmmos.slice() });
+      pBullets.push({ x: px + 28, y: baseY, vx: 3.0, ammoTypes: activeAmmos.slice() });
     }
   }
 
