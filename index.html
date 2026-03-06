@@ -507,7 +507,7 @@
 
   // ===== CONSTANTS =====
   var MENU = 0, PLAYING = 1, WAVE_INTRO = 2, GAMEOVER = 3, BOSS_INTRO = 4;
-  var DESKTOP_SCALE = isMobile ? 1.0 : 1.35;
+  var DESKTOP_SCALE = isMobile ? 2.0 : 1.35;
   var PW = Math.round(60 * DESKTOP_SCALE), PH = Math.round(52 * DESKTOP_SCALE), PSPEED = isMobile ? 6 : 4.5;
   var BASE_SHOT_CD = 200;
   var FONT_TITLE = "'Courier New', monospace";
@@ -1131,6 +1131,7 @@
         }
 
         var sz = isSplitter ? 22 : (isTank ? 24 : (isHeavy ? 26 : (isZapper ? 20 : 18)));
+        sz = Math.round(sz * DESKTOP_SCALE);
         var hpMult = isSplitter ? 2 : (isTank ? 3 : (isHeavy ? 4 : (isShielded ? 1.5 : (isZapper ? 1.5 : 1))));
         enemies.push({
           x: sx + c * spX,
@@ -1167,7 +1168,7 @@
         enemies.push({
           x: megaX,
           y: -30 - mi * 60,
-          size: 40,
+          size: Math.round(40 * DESKTOP_SCALE),
           hp: Math.ceil(15 + wave * 0.5),
           maxHp: Math.ceil(15 + wave * 0.5),
           flash: 0,
@@ -1190,7 +1191,7 @@
       enemies.push({
         x: W / 2 + (Math.random() - 0.5) * 200,
         y: -50,
-        size: 32,
+        size: Math.round(32 * DESKTOP_SCALE),
         hp: Math.ceil(30 + wave * 0.3),
         maxHp: Math.ceil(30 + wave * 0.3),
         flash: 0,
@@ -1219,7 +1220,7 @@
           x: 80 + Math.random() * (W - 160),
           y: -40 - mb * 50,
           targetY: 60 + Math.random() * 100,
-          size: 30,
+          size: Math.round(30 * DESKTOP_SCALE),
           hp: Math.ceil(15 + wave * 0.5),
           maxHp: Math.ceil(15 + wave * 0.5),
           flash: 0,
@@ -1242,17 +1243,17 @@
     if (wave >= 12) {
       baseHP = 80;
       extraHP = Math.min(500, (bossNum - 1) * 25);
-      bossSize = 65;
+      bossSize = Math.round(65 * DESKTOP_SCALE);
       label = '💀 ' + bossCharacters[(bossNum-1) % bossCharacters.length].nameHe + ' #' + bossNum + ' 💀';
     } else if (wave >= 9) {
       baseHP = 55;
       extraHP = Math.min(300, (bossNum - 1) * 18);
-      bossSize = 58;
+      bossSize = Math.round(58 * DESKTOP_SCALE);
       label = '🔥 ' + bossCharacters[(bossNum-1) % bossCharacters.length].nameHe + ' #' + bossNum + ' 🔥';
     } else {
       baseHP = 30;
       extraHP = (bossNum - 1) * 10;
-      bossSize = 50;
+      bossSize = Math.round(50 * DESKTOP_SCALE);
       label = bossCharacters[(bossNum-1) % bossCharacters.length].nameHe + ' #' + bossNum;
     }
 
@@ -1308,7 +1309,7 @@
           x: 100 + Math.random() * (W - 200),
           y: -40 - mb * 50,
           targetY: 80 + Math.random() * 100,
-          size: 35,
+          size: Math.round(35 * DESKTOP_SCALE),
           hp: Math.ceil(30 + wave * 0.3),
           maxHp: Math.ceil(30 + wave * 0.3),
           flash: 0,
@@ -2219,7 +2220,7 @@
     for (var i = 0; i < miniBosses.length; i++) {
       var mb = miniBosses[i];
       ctx.save();
-      var x = mb.x, y = mb.y, s = mb.size || 30;
+      var x = mb.x, y = mb.y, s = mb.size || Math.round(30 * DESKTOP_SCALE);
 
       if (mb.flash > 0) ctx.globalAlpha = 0.5 + Math.sin(performance.now() / 30) * 0.3;
 
@@ -3198,7 +3199,7 @@
                 enemies.push({
                   x: e.x + (si === 0 ? -15 : 15),
                   y: e.y,
-                  size: 12,
+                  size: Math.round(12 * DESKTOP_SCALE),
                   hp: Math.max(1, Math.floor(e.maxHp * 0.4)),
                   maxHp: Math.max(1, Math.floor(e.maxHp * 0.4)),
                   flash: 0,
